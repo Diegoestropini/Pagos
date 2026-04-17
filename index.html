@@ -3,13 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Control de Pagos</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'self'"
     />
+    <meta name="referrer" content="no-referrer" />
+    <title>Control de Pagos</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -30,7 +29,27 @@
         <div class="exchange-card" id="exchangeCard">
           <p class="exchange-label">Dólar estimado en Uruguay</p>
           <strong id="exchangeRateValue">Cargando...</strong>
-          <p id="exchangeRateMeta">Buscando cotización actualizada...</p>
+          <p id="exchangeRateMeta">Preparando cotización local...</p>
+          <label class="exchange-input-label" for="exchangeRateInput">
+            Cotización manual USD/UYU
+          </label>
+          <div class="exchange-actions">
+            <input
+              id="exchangeRateInput"
+              type="number"
+              min="0"
+              step="0.01"
+              inputmode="decimal"
+              placeholder="39.90"
+            />
+            <button id="saveExchangeRateButton" class="primary-button" type="button">
+              Guardar
+            </button>
+          </div>
+          <button id="resetExchangeRateButton" class="ghost-button exchange-reset" type="button">
+            Usar respaldo local
+          </button>
+          <p class="exchange-note">Esta versión no hace consultas externas ni comparte datos.</p>
         </div>
       </section>
 

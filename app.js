@@ -1,6 +1,15 @@
 const STORAGE_KEY = "control-pagos-accounts";
 const RATE_CACHE_KEY = "control-pagos-rate-cache";
 const FALLBACK_USD_TO_UYU = 39.9;
+const VALID_CURRENCIES = new Set(["UYU", "USD"]);
+const STATUS_PRIORITY = {
+  overdue: 0,
+  today: 1,
+  warning: 2,
+  upcoming: 3,
+  scheduled: 4,
+  paid: 5,
+};
 
 const accountForm = document.querySelector("#accountForm");
 const accountIdInput = document.querySelector("#accountId");
@@ -19,6 +28,9 @@ const clearPaidButton = document.querySelector("#clearPaidButton");
 const filterBar = document.querySelector("#filterBar");
 const exchangeRateValue = document.querySelector("#exchangeRateValue");
 const exchangeRateMeta = document.querySelector("#exchangeRateMeta");
+const exchangeRateInput = document.querySelector("#exchangeRateInput");
+const saveExchangeRateButton = document.querySelector("#saveExchangeRateButton");
+const resetExchangeRateButton = document.querySelector("#resetExchangeRateButton");
 const accountCardTemplate = document.querySelector("#accountCardTemplate");
 const toast = document.querySelector("#toast");
 
@@ -26,12 +38,7 @@ const state = {
   accounts: loadAccounts(),
   editingAccountId: null,
   activeFilter: "all",
-  exchangeRate:
-    loadRateCache() || {
-      rate: FALLBACK_USD_TO_UYU,
-      source: "Valor de respaldo",
-      updatedAt: null,
-    },
+  exchangeRate: loadRateCache(),
 };
 
 let toastTimeoutId = null;
@@ -39,10 +46,10 @@ let toastTimeoutId = null;
 initialize();
 
 function initialize() {
+  persistSanitizedState();
   resetForm();
   bindEvents();
   render();
-  refreshExchangeRate();
 }
 
 function bindEvents() {
@@ -50,6 +57,8 @@ function bindEvents() {
   cancelEditButton.addEventListener("click", resetForm);
   clearPaidButton.addEventListener("click", clearPaidAccounts);
   filterBar.addEventListener("click", handleFilterSelection);
+  saveExchangeRateButton.addEventListener("click", saveManualExchangeRate);
+  resetExchangeRateButton.addEventListener("click", resetExchangeRate);
 }
 
 function handleSubmit(event) {
@@ -57,21 +66,27 @@ function handleSubmit(event) {
 
   const formData = new FormData(accountForm);
   const accountId = String(formData.get("accountId") || "").trim();
-  const name = String(formData.get("name") || "").trim();
-  const dueDate = String(formData.get("dueDate") || "");
-  const amount = Number(formData.get("amount"));
-  const currency = String(formData.get("currency") || "UYU");
+  const name = normalizeName(formData.get("name"));
+  const dueDate = String(formData.get("dueDate") || "").trim();
+  const amount = normalizePositiveAmount(formData.get("amount"));
+  const currency = normalizeCurrency(formData.get("currency"));
 
-  if (!name || !dueDate || !Number.isFinite(amount) || amount <= 0) {
+  if (!name || !isValidIsoDate(dueDate) || !Number.isFinite(amount) || amount <= 0) {
     showToast("Completá un nombre, fecha y monto válidos.");
     return;
   }
 
-  const startDate = new Date(`${dueDate}T12:00:00`);
+  const dueDay = getDueDayFromDate(dueDate);
+
+  if (!Number.isInteger(dueDay)) {
+    showToast("La fecha ingresada no es válida.");
+    return;
+  }
+
   const baseAccount = {
     name,
     startDate: dueDate,
-    dueDay: startDate.getDate(),
+    dueDay,
     amount,
     currency,
   };
@@ -82,29 +97,25 @@ function handleSubmit(event) {
         return account;
       }
 
-      const nextPaidThroughMonth = clampPaidThroughMonth(
-        account.paidThroughMonth,
-        dueDate,
-      );
-
       return {
         ...account,
         ...baseAccount,
-        paidThroughMonth: nextPaidThroughMonth,
+        paidThroughMonth: clampPaidThroughMonth(account.paidThroughMonth, dueDate),
         updatedAt: new Date().toISOString(),
       };
     });
 
     showToast("Cuenta actualizada.");
   } else {
-    const account = {
+    state.accounts.unshift({
       id: crypto.randomUUID(),
       ...baseAccount,
       paidThroughMonth: null,
       createdAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString(),
+      lastPaidAt: null,
+    });
 
-    state.accounts.unshift(account);
     showToast("Cuenta guardada.");
   }
 
@@ -128,7 +139,9 @@ function clearPaidAccounts() {
   const confirmed = window.confirm(
     `Se van a eliminar ${paidAccounts.length} cuenta${
       paidAccounts.length === 1 ? "" : "s"
-    } marcada${paidAccounts.length === 1 ? "" : "s"} como pagada${paidAccounts.length === 1 ? "" : "s"}.`,
+    } marcada${paidAccounts.length === 1 ? "" : "s"} como pagada${
+      paidAccounts.length === 1 ? "" : "s"
+    }.`,
   );
 
   if (!confirmed) {
@@ -155,6 +168,27 @@ function handleFilterSelection(event) {
   render();
 }
 
+function saveManualExchangeRate() {
+  const nextRate = normalizePositiveAmount(exchangeRateInput.value);
+
+  if (!Number.isFinite(nextRate) || nextRate <= 0) {
+    showToast("Ingresá una cotización válida mayor a cero.");
+    return;
+  }
+
+  state.exchangeRate = buildManualRate(nextRate);
+  saveRateCache();
+  render();
+  showToast("Cotización guardada localmente.");
+}
+
+function resetExchangeRate() {
+  state.exchangeRate = buildFallbackRate();
+  saveRateCache();
+  render();
+  showToast("Se restableció la cotización de respaldo.");
+}
+
 function render() {
   const today = getLocalToday();
   const detailsList = state.accounts
@@ -169,11 +203,12 @@ function render() {
 
 function renderStats(detailsList, today) {
   const pendingDetails = detailsList.filter((item) => item.statusKey !== "paid");
-  const activeCount = pendingDetails.length;
-  const dueTodayCount = pendingDetails.filter(
-    (item) => differenceInDays(today, item.currentDueDate) === 0,
-  ).length;
+  const dueTodayCount = pendingDetails.filter((item) => item.statusKey === "today").length;
   const dueThisWeekCount = pendingDetails.filter((item) => {
+    if (item.statusKey === "scheduled") {
+      return false;
+    }
+
     const days = differenceInDays(today, item.currentDueDate);
     return days >= 0 && days <= 7;
   }).length;
@@ -189,7 +224,7 @@ function renderStats(detailsList, today) {
     {
       tone: "neutral",
       label: "Cuentas activas",
-      value: String(activeCount),
+      value: String(pendingDetails.length),
       small: `${detailsList.length} registradas`,
     },
     {
@@ -212,22 +247,35 @@ function renderStats(detailsList, today) {
     },
   ];
 
-  statsGrid.innerHTML = cards
-    .map(
-      (card) => `
-        <article class="stat-card stat-card-${card.tone}">
-          <p>${card.label}</p>
-          <strong>${card.value}</strong>
-          ${card.small ? `<p>${card.small}</p>` : ""}
-        </article>
-      `,
-    )
-    .join("");
+  statsGrid.replaceChildren(
+    ...cards.map((card) => {
+      const article = document.createElement("article");
+      article.className = `stat-card stat-card-${card.tone}`;
+
+      const label = document.createElement("p");
+      label.textContent = card.label;
+
+      const value = document.createElement("strong");
+      value.textContent = card.value;
+
+      article.append(label, value);
+
+      if (card.small) {
+        const small = document.createElement("p");
+        small.textContent = card.small;
+        article.appendChild(small);
+      }
+
+      return article;
+    }),
+  );
 
   summaryText.textContent =
     detailsList.length === 0
       ? "Todavía no hay pagos cargados."
-      : `${activeCount} cuenta${activeCount === 1 ? "" : "s"} activas. Total pendiente: ${formatCurrency(totalPendingUyu, "UYU")}.`;
+      : `${pendingDetails.length} cuenta${
+          pendingDetails.length === 1 ? "" : "s"
+        } activas. Total pendiente: ${formatCurrency(totalPendingUyu, "UYU")}.`;
 }
 
 function renderFilters(detailsList) {
@@ -240,33 +288,26 @@ function renderFilters(detailsList) {
 
   filterBar.querySelectorAll("[data-filter]").forEach((button) => {
     const filterKey = button.dataset.filter;
-    const label = button.textContent.split(" (")[0];
+    const label = button.dataset.label || button.textContent.split(" (")[0];
+    button.dataset.label = label;
     button.classList.toggle("is-active", filterKey === state.activeFilter);
     button.textContent = `${label} (${counts[filterKey] || 0})`;
   });
 }
 
 function renderAccounts(detailsList) {
-  accountList.innerHTML = "";
-
   if (detailsList.length === 0) {
-    accountList.innerHTML = `
-      <div class="empty-state">
-        Agregá tu primera cuenta y la app empezará a controlar vencimientos,
-        pagos y acumulación mensual automáticamente.
-      </div>
-    `;
+    setEmptyState(
+      accountList,
+      "Agregá tu primera cuenta y la app empezará a controlar vencimientos y pagos sin salir de tu navegador.",
+    );
     return;
   }
 
   const filteredDetails = detailsList.filter(matchesActiveFilter);
 
   if (filteredDetails.length === 0) {
-    accountList.innerHTML = `
-      <div class="empty-state">
-        No hay cuentas para el filtro seleccionado.
-      </div>
-    `;
+    setEmptyState(accountList, "No hay cuentas para el filtro seleccionado.");
     return;
   }
 
@@ -286,9 +327,14 @@ function renderAccounts(detailsList) {
     const markPaidButton = node.querySelector(".mark-paid-button");
     const undoPaidButton = node.querySelector(".undo-paid-button");
 
-    markPaidButton.disabled = details.statusKey === "paid";
+    markPaidButton.disabled =
+      details.statusKey === "paid" || details.statusKey === "scheduled";
     markPaidButton.textContent =
-      details.pendingInstallments > 1 ? "Marcar al día" : "Marcar pago del mes";
+      details.statusKey === "scheduled"
+        ? "Aún no corresponde"
+        : details.pendingInstallments > 1
+          ? "Marcar al día"
+          : "Marcar pago del mes";
     markPaidButton.addEventListener("click", () => markAsPaid(details.account.id));
 
     undoPaidButton.disabled = !details.account.paidThroughMonth;
@@ -308,17 +354,17 @@ function renderAccounts(detailsList) {
     fragment.appendChild(node);
   });
 
-  accountList.appendChild(fragment);
+  accountList.replaceChildren(fragment);
 }
 
 function renderMeta(container, lines) {
-  container.textContent = "";
-
-  lines.forEach((line) => {
-    const paragraph = document.createElement("p");
-    paragraph.textContent = line;
-    container.appendChild(paragraph);
-  });
+  container.replaceChildren(
+    ...lines.map((line) => {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = line;
+      return paragraph;
+    }),
+  );
 }
 
 function startEditing(accountId) {
@@ -347,7 +393,8 @@ function resetForm() {
   accountForm.reset();
   accountIdInput.value = "";
   formTitle.textContent = "Nueva cuenta";
-  formSubtitle.textContent = "Agregá pagos mensuales y dejalos guardados localmente.";
+  formSubtitle.textContent =
+    "Agregá pagos mensuales y dejalos guardados localmente.";
   submitButton.textContent = "Guardar cuenta";
   cancelEditButton.classList.add("is-hidden");
   setDefaultDueDate();
@@ -357,15 +404,23 @@ function markAsPaid(accountId) {
   const today = getLocalToday();
   const currentMonthKey = toMonthKey(today);
 
-  state.accounts = state.accounts.map((account) =>
-    account.id === accountId
-      ? {
-          ...account,
-          paidThroughMonth: currentMonthKey,
-          lastPaidAt: new Date().toISOString(),
-        }
-      : account,
-  );
+  state.accounts = state.accounts.map((account) => {
+    if (account.id !== accountId) {
+      return account;
+    }
+
+    const details = buildAccountDetails(account, today, state.exchangeRate.rate);
+    if (details.statusKey === "scheduled") {
+      return account;
+    }
+
+    return {
+      ...account,
+      paidThroughMonth: currentMonthKey,
+      lastPaidAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  });
 
   saveAccounts();
   render();
@@ -382,6 +437,7 @@ function undoLastPayment(accountId) {
       ...account,
       paidThroughMonth: getPreviousMonthKey(account.paidThroughMonth, account.startDate),
       lastPaidAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
   });
 
@@ -414,24 +470,34 @@ function deleteAccount(accountId) {
 
 function buildAccountDetails(account, today, exchangeRate) {
   const currentMonthKey = toMonthKey(today);
-  const startMonthKey = toMonthKey(new Date(`${account.startDate}T12:00:00`));
-  const totalCycles = Math.max(0, monthDiff(startMonthKey, currentMonthKey) + 1);
+  const startMonthKey = toMonthKey(parseLocalDate(account.startDate));
+  const cyclesDue = Math.max(0, monthDiff(startMonthKey, currentMonthKey) + 1);
   const paidCycles = account.paidThroughMonth
     ? Math.max(0, monthDiff(startMonthKey, account.paidThroughMonth) + 1)
     : 0;
-  const pendingInstallments = Math.max(0, totalCycles - paidCycles);
-  const currentDueDate = buildDateForMonth(currentMonthKey, account.dueDay);
+  const pendingInstallments = Math.max(0, cyclesDue - paidCycles);
+  const currentDueDate =
+    cyclesDue > 0
+      ? buildDateForMonth(currentMonthKey, account.dueDay)
+      : buildDateForMonth(startMonthKey, account.dueDay);
   const daysUntilDue = differenceInDays(today, currentDueDate);
+  const isScheduled = cyclesDue === 0;
 
   let statusKey = "upcoming";
   let statusLabel = "Por pagar";
 
-  if (pendingInstallments <= 0) {
+  if (isScheduled) {
+    statusKey = "scheduled";
+    statusLabel = "Programada";
+  } else if (pendingInstallments <= 0) {
     statusKey = "paid";
     statusLabel = "Pagada";
-  } else if (pendingInstallments > 1 || daysUntilDue <= 0) {
+  } else if (pendingInstallments > 1 || daysUntilDue < 0) {
     statusKey = "overdue";
     statusLabel = pendingInstallments > 1 ? "Deuda acumulada" : "Vencida";
+  } else if (daysUntilDue === 0) {
+    statusKey = "today";
+    statusLabel = "Vence hoy";
   } else if (daysUntilDue <= 2) {
     statusKey = "warning";
     statusLabel = "Vence pronto";
@@ -442,34 +508,84 @@ function buildAccountDetails(account, today, exchangeRate) {
     account.currency === "USD" ? totalOriginal * exchangeRate : totalOriginal;
 
   const scheduleLabel = `Mensual, vence cada ${account.dueDay} · inicia ${formatDate(
-    new Date(`${account.startDate}T12:00:00`),
+    parseLocalDate(account.startDate),
   )}`;
 
-  const secondaryAmount =
-    account.currency === "USD"
-      ? `Estimado en pesos: ${formatCurrency(totalEstimatedUyu, "UYU")}`
-      : `Monto mensual: ${formatCurrency(account.amount, "UYU")}`;
+  const totalDisplay = isScheduled
+    ? formatCurrency(account.amount, account.currency)
+    : formatCurrency(totalOriginal, account.currency);
+  const secondaryAmount = buildSecondaryAmount(
+    account,
+    exchangeRate,
+    totalEstimatedUyu,
+    isScheduled,
+  );
+  const metaLines = buildMetaLines(
+    account,
+    statusKey,
+    pendingInstallments,
+    currentDueDate,
+    daysUntilDue,
+    exchangeRate,
+  );
 
+  return {
+    account,
+    statusKey,
+    statusLabel,
+    pendingInstallments,
+    totalEstimatedUyu,
+    totalDisplay,
+    secondaryAmount,
+    scheduleLabel,
+    metaLines,
+    daysUntilDue,
+    currentDueDate,
+  };
+}
+
+function buildSecondaryAmount(account, exchangeRate, totalEstimatedUyu, isScheduled) {
+  if (account.currency === "USD") {
+    const uyuValue = isScheduled ? account.amount * exchangeRate : totalEstimatedUyu;
+    return `${isScheduled ? "Monto mensual estimado" : "Estimado en pesos"}: ${formatCurrency(
+      uyuValue,
+      "UYU",
+    )}`;
+  }
+
+  return isScheduled
+    ? `Monto mensual previsto: ${formatCurrency(account.amount, "UYU")}`
+    : `Monto mensual: ${formatCurrency(account.amount, "UYU")}`;
+}
+
+function buildMetaLines(
+  account,
+  statusKey,
+  pendingInstallments,
+  currentDueDate,
+  daysUntilDue,
+  exchangeRate,
+) {
   const metaLines = [];
 
-  if (pendingInstallments > 1) {
+  if (statusKey === "scheduled") {
+    metaLines.push(`Esta cuenta empieza a correr el ${formatDate(currentDueDate)}.`);
+  } else if (pendingInstallments > 1) {
     metaLines.push(
       `Tenés ${pendingInstallments} meses acumulados. La deuda ya incluye varios ciclos impagos.`,
     );
   } else if (statusKey === "paid") {
     metaLines.push("La cuenta está marcada como pagada para el mes actual.");
+  } else if (statusKey === "today") {
+    metaLines.push("El vencimiento es hoy.");
   } else if (statusKey === "warning") {
     metaLines.push(
       `Faltan ${daysUntilDue} día${daysUntilDue === 1 ? "" : "s"} para el vencimiento.`,
     );
   } else if (statusKey === "overdue" && pendingInstallments === 1) {
     metaLines.push(
-      `El vencimiento fue ${
-        daysUntilDue === 0
-          ? "hoy"
-          : `hace ${Math.abs(daysUntilDue)} día${
-              Math.abs(daysUntilDue) === 1 ? "" : "s"
-            }`
+      `El vencimiento fue hace ${Math.abs(daysUntilDue)} día${
+        Math.abs(daysUntilDue) === 1 ? "" : "s"
       }.`,
     );
   } else {
@@ -484,19 +600,7 @@ function buildAccountDetails(account, today, exchangeRate) {
     metaLines.push(`Último cambio de pago: ${formatDateTime(account.lastPaidAt)}.`);
   }
 
-  return {
-    account,
-    statusKey,
-    statusLabel,
-    pendingInstallments,
-    totalEstimatedUyu,
-    totalDisplay: formatCurrency(totalOriginal, account.currency),
-    secondaryAmount,
-    scheduleLabel,
-    metaLines,
-    daysUntilDue,
-    currentDueDate,
-  };
+  return metaLines;
 }
 
 function matchesActiveFilter(details) {
@@ -516,133 +620,16 @@ function matchesActiveFilter(details) {
 }
 
 function sortAccounts(a, b) {
-  const priority = {
-    overdue: 0,
-    warning: 1,
-    upcoming: 2,
-    paid: 3,
-  };
-
-  if (priority[a.statusKey] !== priority[b.statusKey]) {
-    return priority[a.statusKey] - priority[b.statusKey];
+  if (STATUS_PRIORITY[a.statusKey] !== STATUS_PRIORITY[b.statusKey]) {
+    return STATUS_PRIORITY[a.statusKey] - STATUS_PRIORITY[b.statusKey];
   }
 
   return a.currentDueDate - b.currentDueDate;
 }
 
-async function refreshExchangeRate() {
-  try {
-    const bcuRate = await fetchBcuRate();
-    if (bcuRate) {
-      state.exchangeRate = bcuRate;
-      saveRateCache();
-      render();
-      return;
-    }
-  } catch (error) {
-    console.error("No se pudo obtener la cotización del BCU.", error);
-  }
-
-  try {
-    const fallbackRate = await fetchOpenRate();
-    if (fallbackRate) {
-      state.exchangeRate = fallbackRate;
-      saveRateCache();
-      render();
-      return;
-    }
-  } catch (error) {
-    console.error("No se pudo obtener la cotización alternativa.", error);
-  }
-
-  renderExchangeRate(true);
-}
-
-async function fetchBcuRate() {
-  const bcuUrl =
-    "https://www.bcu.gub.uy/Estadisticas-e-Indicadores/Paginas/Cotizaciones.aspx?ID=9";
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(bcuUrl)}`;
-  const response = await fetch(proxyUrl, { cache: "no-store" });
-
-  if (!response.ok) {
-    throw new Error("Respuesta no válida desde el proxy del BCU.");
-  }
-
-  const html = await response.text();
-  const parsed = parseBcuHtml(html);
-
-  if (!parsed) {
-    throw new Error("No se pudo interpretar la cotización del BCU.");
-  }
-
-  return {
-    rate: parsed.rate,
-    source: `BCU · ${parsed.date}`,
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function parseBcuHtml(html) {
-  const parser = new DOMParser();
-  const documentFragment = parser.parseFromString(html, "text/html");
-  const row = Array.from(documentFragment.querySelectorAll("tr")).find((item) =>
-    item.textContent?.includes("DLS. USA BILLETE"),
-  );
-
-  if (!row) {
-    return null;
-  }
-
-  const cells = Array.from(row.querySelectorAll("td, th")).map((cell) =>
-    cell.textContent.trim(),
-  );
-  const date = cells.find((value) => /^\d{2}\/\d{2}\/\d{4}$/.test(value));
-  const rateText = cells.find((value) => /^\d{1,3},\d{1,3}$/.test(value));
-
-  if (!date || !rateText) {
-    return null;
-  }
-
-  const rate = Number(rateText.replace(".", "").replace(",", "."));
-
-  if (!Number.isFinite(rate)) {
-    return null;
-  }
-
-  return { date, rate };
-}
-
-async function fetchOpenRate() {
-  const response = await fetch("https://open.er-api.com/v6/latest/USD", {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error("No se pudo consultar la API alternativa.");
-  }
-
-  const data = await response.json();
-  const rate = Number(data?.rates?.UYU);
-
-  if (!Number.isFinite(rate)) {
-    throw new Error("La API alternativa no devolvió UYU.");
-  }
-
-  return {
-    rate,
-    source: "open.er-api.com",
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function renderExchangeRate(withError = false) {
+function renderExchangeRate() {
   exchangeRateValue.textContent = `${formatRate(state.exchangeRate.rate)} / USD`;
-
-  if (withError) {
-    exchangeRateMeta.textContent =
-      "No se pudo actualizar en línea. Se muestra el último valor disponible o respaldo.";
-    return;
-  }
+  exchangeRateInput.value = String(state.exchangeRate.rate);
 
   const updatedText = state.exchangeRate.updatedAt
     ? `Actualizado ${formatDateTime(state.exchangeRate.updatedAt)}`
@@ -670,8 +657,7 @@ function setDefaultDueDate() {
 
 function loadAccounts() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    return sanitizeAccounts(JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"));
   } catch (error) {
     console.error("No se pudieron cargar las cuentas.", error);
     return [];
@@ -684,11 +670,10 @@ function saveAccounts() {
 
 function loadRateCache() {
   try {
-    const raw = localStorage.getItem(RATE_CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    return sanitizeRate(JSON.parse(localStorage.getItem(RATE_CACHE_KEY) || "null"));
   } catch (error) {
     console.error("No se pudo cargar la cotización guardada.", error);
-    return null;
+    return buildFallbackRate();
   }
 }
 
@@ -696,12 +681,141 @@ function saveRateCache() {
   localStorage.setItem(RATE_CACHE_KEY, JSON.stringify(state.exchangeRate));
 }
 
+function persistSanitizedState() {
+  saveAccounts();
+  saveRateCache();
+}
+
+function sanitizeAccounts(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map(sanitizeAccount)
+    .filter((account) => account !== null)
+    .sort((a, b) => compareIsoDates(b.updatedAt || b.createdAt, a.updatedAt || a.createdAt));
+}
+
+function sanitizeAccount(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const id = typeof value.id === "string" && value.id.trim() ? value.id.trim() : null;
+  const name = normalizeName(value.name);
+  const startDate = typeof value.startDate === "string" ? value.startDate.trim() : "";
+  const dueDay = Number(value.dueDay);
+  const amount = normalizePositiveAmount(value.amount);
+  const currency = normalizeCurrency(value.currency);
+  const createdAt = sanitizeIsoDateTime(value.createdAt);
+  const updatedAt = sanitizeIsoDateTime(value.updatedAt) || createdAt;
+  const lastPaidAt = sanitizeIsoDateTime(value.lastPaidAt);
+
+  if (
+    !id ||
+    !name ||
+    !isValidIsoDate(startDate) ||
+    !Number.isInteger(dueDay) ||
+    dueDay < 1 ||
+    dueDay > 31 ||
+    !Number.isFinite(amount) ||
+    amount <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    id,
+    name,
+    startDate,
+    dueDay,
+    amount,
+    currency,
+    paidThroughMonth: sanitizeMonthKey(value.paidThroughMonth, startDate),
+    createdAt: createdAt || new Date().toISOString(),
+    updatedAt: updatedAt || new Date().toISOString(),
+    lastPaidAt,
+  };
+}
+
+function sanitizeRate(value) {
+  if (!value || typeof value !== "object") {
+    return buildFallbackRate();
+  }
+
+  const rate = normalizePositiveAmount(value.rate);
+
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return buildFallbackRate();
+  }
+
+  return {
+    rate,
+    source:
+      typeof value.source === "string" && value.source.trim()
+        ? value.source.trim().slice(0, 80)
+        : "Manual",
+    updatedAt: sanitizeIsoDateTime(value.updatedAt),
+  };
+}
+
+function buildFallbackRate() {
+  return {
+    rate: FALLBACK_USD_TO_UYU,
+    source: "Respaldo local",
+    updatedAt: null,
+  };
+}
+
+function buildManualRate(rate) {
+  return {
+    rate,
+    source: "Manual",
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeName(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.replace(/\s+/g, " ").trim().slice(0, 120);
+}
+
+function normalizeCurrency(value) {
+  return VALID_CURRENCIES.has(value) ? value : "UYU";
+}
+
+function normalizePositiveAmount(value) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? Math.round(amount * 100) / 100 : Number.NaN;
+}
+
+function sanitizeIsoDateTime(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
+function sanitizeMonthKey(value, startDate) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  return clampPaidThroughMonth(value, startDate);
+}
+
 function clampPaidThroughMonth(paidThroughMonth, startDate) {
   if (!paidThroughMonth) {
     return null;
   }
 
-  const startMonthKey = toMonthKey(new Date(`${startDate}T12:00:00`));
+  const startMonthKey = toMonthKey(parseLocalDate(startDate));
   return monthDiff(startMonthKey, paidThroughMonth) >= 0 ? paidThroughMonth : null;
 }
 
@@ -709,7 +823,7 @@ function getPreviousMonthKey(currentMonthKey, startDate) {
   const currentDate = buildDateForMonth(currentMonthKey, 1);
   const previousDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
   const previousMonthKey = toMonthKey(previousDate);
-  const startMonthKey = toMonthKey(new Date(`${startDate}T12:00:00`));
+  const startMonthKey = toMonthKey(parseLocalDate(startDate));
 
   return monthDiff(startMonthKey, previousMonthKey) >= 0 ? previousMonthKey : null;
 }
@@ -717,6 +831,34 @@ function getPreviousMonthKey(currentMonthKey, startDate) {
 function getLocalToday() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function parseLocalDate(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function isValidIsoDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const parsed = parseLocalDate(value);
+  return toInputDate(parsed) === value;
+}
+
+function getDueDayFromDate(value) {
+  if (!isValidIsoDate(value)) {
+    return null;
+  }
+
+  return parseLocalDate(value).getDate();
+}
+
+function compareIsoDates(a, b) {
+  const timeA = sanitizeIsoDateTime(a) ? new Date(a).getTime() : 0;
+  const timeB = sanitizeIsoDateTime(b) ? new Date(b).getTime() : 0;
+  return timeA - timeB;
 }
 
 function toMonthKey(date) {
@@ -737,7 +879,7 @@ function monthDiff(fromMonthKey, toMonthKey) {
 
 function differenceInDays(fromDate, toDate) {
   const msPerDay = 1000 * 60 * 60 * 24;
-  return Math.ceil((toDate - fromDate) / msPerDay);
+  return Math.round((toDate - fromDate) / msPerDay);
 }
 
 function toInputDate(date) {
@@ -745,6 +887,13 @@ function toInputDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function setEmptyState(container, message) {
+  const emptyState = document.createElement("div");
+  emptyState.className = "empty-state";
+  emptyState.textContent = message;
+  container.replaceChildren(emptyState);
 }
 
 function formatDate(date) {

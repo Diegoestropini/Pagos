@@ -23,7 +23,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: "Outfit", sans-serif;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   background:
     radial-gradient(circle at top left, rgba(31, 121, 176, 0.24), transparent 35%),
     radial-gradient(circle at bottom right, rgba(50, 192, 138, 0.14), transparent 30%),
@@ -107,8 +107,8 @@ body {
 }
 
 .exchange-card {
-  min-width: 280px;
-  max-width: 320px;
+  min-width: 320px;
+  max-width: 360px;
   border-radius: 24px;
   padding: 20px 22px;
   align-self: flex-end;
@@ -122,6 +122,47 @@ body {
   font-size: 1.9rem;
   display: block;
   margin-bottom: 8px;
+}
+
+.exchange-input-label {
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: #d8e6f5;
+  font-size: 0.92rem;
+}
+
+.exchange-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.exchange-actions input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  padding: 14px 16px;
+  outline: none;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.exchange-actions input:focus {
+  border-color: rgba(79, 183, 255, 0.55);
+  transform: translateY(-1px);
+}
+
+.exchange-reset {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.exchange-note {
+  margin-top: 12px;
+  font-size: 0.88rem;
 }
 
 .layout-grid {
@@ -244,7 +285,8 @@ button:active {
 
 button:focus-visible,
 .account-form input:focus-visible,
-.account-form select:focus-visible {
+.account-form select:focus-visible,
+.exchange-actions input:focus-visible {
   outline: 2px solid rgba(79, 183, 255, 0.85);
   outline-offset: 2px;
 }
@@ -436,14 +478,16 @@ button:disabled {
   transform: translateY(-2px);
 }
 
-.account-card.status-upcoming {
+.account-card.status-upcoming,
+.account-card.status-scheduled {
   border-left-color: var(--blue);
   background:
     linear-gradient(0deg, rgba(79, 183, 255, 0.08), rgba(79, 183, 255, 0.08)),
     var(--panel);
 }
 
-.account-card.status-warning {
+.account-card.status-warning,
+.account-card.status-today {
   border-left-color: var(--orange);
   background:
     linear-gradient(0deg, rgba(255, 179, 72, 0.08), rgba(255, 179, 72, 0.08)),
@@ -490,12 +534,14 @@ button:disabled {
   letter-spacing: 0.02em;
 }
 
-.status-upcoming .status-pill {
+.status-upcoming .status-pill,
+.status-scheduled .status-pill {
   background: var(--blue-soft);
   color: #86d4ff;
 }
 
-.status-warning .status-pill {
+.status-warning .status-pill,
+.status-today .status-pill {
   background: var(--orange-soft);
   color: #ffc980;
 }
@@ -597,7 +643,8 @@ button:disabled {
 
   .stats-grid,
   .legend,
-  .form-row {
+  .form-row,
+  .exchange-actions {
     grid-template-columns: 1fr;
   }
 
@@ -614,7 +661,8 @@ button:disabled {
   }
 
   .account-actions button,
-  .filter-button {
+  .filter-button,
+  .exchange-reset {
     width: 100%;
   }
 
