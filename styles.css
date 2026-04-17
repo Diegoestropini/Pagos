@@ -1,0 +1,456 @@
+:root {
+  --bg: #081019;
+  --bg-soft: rgba(15, 26, 41, 0.82);
+  --panel: rgba(10, 19, 31, 0.82);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --text: #f3f7fb;
+  --muted: #95a8bd;
+  --blue: #4fb7ff;
+  --blue-soft: rgba(79, 183, 255, 0.18);
+  --orange: #ffb348;
+  --orange-soft: rgba(255, 179, 72, 0.18);
+  --red: #ff5c72;
+  --red-soft: rgba(255, 92, 114, 0.18);
+  --green: #48d597;
+  --green-soft: rgba(72, 213, 151, 0.18);
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Outfit", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(31, 121, 176, 0.24), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(50, 192, 138, 0.14), transparent 30%),
+    linear-gradient(180deg, #081019 0%, #050b12 100%);
+  color: var(--text);
+}
+
+.background-glow {
+  position: fixed;
+  inset: auto;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.background-glow-a {
+  top: -6rem;
+  left: -6rem;
+  background: #1393ff;
+}
+
+.background-glow-b {
+  right: -6rem;
+  bottom: -6rem;
+  background: #16b87d;
+}
+
+.app-shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 20px 44px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 28px;
+}
+
+.hero h1 {
+  margin: 8px 0 12px;
+  font-size: clamp(2.2rem, 4vw, 3.8rem);
+  line-height: 0.98;
+  max-width: 11ch;
+  letter-spacing: -0.05em;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #7ed0ff;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.74rem;
+}
+
+.hero-copy,
+.panel-header p,
+.exchange-card p,
+.account-schedule,
+.account-meta,
+#summaryText,
+.secondary-amount {
+  color: var(--muted);
+}
+
+.exchange-card,
+.panel,
+.stat-card,
+.account-card {
+  backdrop-filter: blur(16px);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow);
+}
+
+.exchange-card {
+  min-width: 280px;
+  max-width: 320px;
+  border-radius: 24px;
+  padding: 22px;
+  align-self: flex-end;
+}
+
+.exchange-label {
+  margin: 0 0 10px;
+}
+
+.exchange-card strong {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 24px;
+}
+
+.panel {
+  border-radius: 28px;
+  padding: 24px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.panel-header p {
+  margin: 8px 0 0;
+}
+
+.panel-header-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.account-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.account-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.account-form span {
+  color: #d8e6f5;
+  font-size: 0.92rem;
+}
+
+.account-form input,
+.account-form select,
+button {
+  font: inherit;
+}
+
+.account-form input,
+.account-form select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  padding: 14px 16px;
+  outline: none;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.account-form input:focus,
+.account-form select:focus {
+  border-color: rgba(79, 183, 255, 0.55);
+  transform: translateY(-1px);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 130px;
+  gap: 12px;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.primary-button,
+.success-button,
+.ghost-button,
+.danger-button {
+  border-radius: 16px;
+  padding: 13px 16px;
+  font-weight: 600;
+}
+
+.primary-button {
+  background: linear-gradient(135deg, #3aa9ff, #1669ff);
+  color: white;
+  box-shadow: 0 14px 26px rgba(32, 112, 255, 0.24);
+}
+
+.success-button {
+  background: linear-gradient(135deg, #31d08d, #1f9f70);
+  color: white;
+}
+
+.ghost-button {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+}
+
+.danger-button {
+  background: rgba(255, 92, 114, 0.12);
+  color: #ff8b9c;
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin-top: 24px;
+  font-size: 0.92rem;
+  color: #dce8f5;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.dot-blue {
+  background: var(--blue);
+}
+
+.dot-orange {
+  background: var(--orange);
+}
+
+.dot-red {
+  background: var(--red);
+}
+
+.dot-green {
+  background: var(--green);
+}
+
+.content-column {
+  display: grid;
+  gap: 24px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  border-radius: 24px;
+  padding: 20px;
+}
+
+.stat-card p {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.stat-card strong {
+  display: block;
+  font-size: 1.9rem;
+}
+
+.account-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.empty-state {
+  padding: 38px 24px;
+  text-align: center;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  color: var(--muted);
+}
+
+.account-card {
+  border-radius: 26px;
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+  border-left-width: 5px;
+}
+
+.account-card.status-upcoming {
+  border-left-color: var(--blue);
+  background:
+    linear-gradient(0deg, rgba(79, 183, 255, 0.08), rgba(79, 183, 255, 0.08)),
+    var(--panel);
+}
+
+.account-card.status-warning {
+  border-left-color: var(--orange);
+  background:
+    linear-gradient(0deg, rgba(255, 179, 72, 0.08), rgba(255, 179, 72, 0.08)),
+    var(--panel);
+}
+
+.account-card.status-overdue {
+  border-left-color: var(--red);
+  background:
+    linear-gradient(0deg, rgba(255, 92, 114, 0.08), rgba(255, 92, 114, 0.08)),
+    var(--panel);
+}
+
+.account-card.status-paid {
+  border-left-color: var(--green);
+  background:
+    linear-gradient(0deg, rgba(72, 213, 151, 0.08), rgba(72, 213, 151, 0.08)),
+    var(--panel);
+}
+
+.account-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.account-name {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.account-schedule {
+  margin: 6px 0 0;
+}
+
+.status-pill {
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.status-upcoming .status-pill {
+  background: var(--blue-soft);
+  color: #86d4ff;
+}
+
+.status-warning .status-pill {
+  background: var(--orange-soft);
+  color: #ffc980;
+}
+
+.status-overdue .status-pill {
+  background: var(--red-soft);
+  color: #ff95a3;
+}
+
+.status-paid .status-pill {
+  background: var(--green-soft);
+  color: #8af4c1;
+}
+
+.amount-block {
+  display: grid;
+  gap: 6px;
+}
+
+.primary-amount {
+  font-size: 1.8rem;
+}
+
+.secondary-amount {
+  margin: 0;
+}
+
+.account-meta {
+  font-size: 0.96rem;
+  line-height: 1.5;
+}
+
+.account-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 980px) {
+  .hero,
+  .layout-grid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .exchange-card {
+    max-width: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 22px 14px 36px;
+  }
+
+  .panel {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  .stats-grid,
+  .legend,
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-header-row,
+  .account-card-top,
+  .account-actions {
+    display: grid;
+  }
+}

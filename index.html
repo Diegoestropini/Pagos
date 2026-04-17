@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Control de Pagos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="background-glow background-glow-a"></div>
+    <div class="background-glow background-glow-b"></div>
+
+    <main class="app-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Control mensual con fecha local</p>
+          <h1>Pagos claros, vencimientos visibles y deuda acumulada.</h1>
+          <p class="hero-copy">
+            Las cuentas quedan guardadas en tu navegador y se recalculan con la
+            fecha local de tu computadora.
+          </p>
+        </div>
+
+        <div class="exchange-card" id="exchangeCard">
+          <p class="exchange-label">Dólar estimado en Uruguay</p>
+          <strong id="exchangeRateValue">Cargando...</strong>
+          <p id="exchangeRateMeta">Buscando cotización actualizada...</p>
+        </div>
+      </section>
+
+      <section class="layout-grid">
+        <aside class="panel panel-form">
+          <div class="panel-header">
+            <h2>Nueva cuenta</h2>
+            <p>Agregá pagos mensuales y dejalos guardados localmente.</p>
+          </div>
+
+          <form id="accountForm" class="account-form">
+            <label>
+              <span>Nombre de la cuenta</span>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="Ej: UTE, Antel, alquiler"
+                required
+              />
+            </label>
+
+            <label>
+              <span>Primer vencimiento</span>
+              <input id="dueDate" name="dueDate" type="date" required />
+            </label>
+
+            <div class="form-row">
+              <label>
+                <span>Monto</span>
+                <input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Moneda</span>
+                <select id="currency" name="currency" required>
+                  <option value="UYU">Pesos</option>
+                  <option value="USD">Dólares</option>
+                </select>
+              </label>
+            </div>
+
+            <button type="submit" class="primary-button">Guardar cuenta</button>
+          </form>
+
+          <div class="legend">
+            <div><span class="dot dot-blue"></span> Por pagar</div>
+            <div><span class="dot dot-orange"></span> Vence en 2 días</div>
+            <div><span class="dot dot-red"></span> Vencida</div>
+            <div><span class="dot dot-green"></span> Pagada</div>
+          </div>
+        </aside>
+
+        <section class="content-column">
+          <div class="stats-grid" id="statsGrid"></div>
+
+          <section class="panel panel-list">
+            <div class="panel-header panel-header-row">
+              <div>
+                <h2>Tus cuentas</h2>
+                <p id="summaryText">Todavía no hay pagos cargados.</p>
+              </div>
+              <button id="clearPaidButton" class="ghost-button" type="button">
+                Limpiar pagadas
+              </button>
+            </div>
+
+            <div id="accountList" class="account-list"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <template id="accountCardTemplate">
+      <article class="account-card">
+        <div class="account-card-top">
+          <div>
+            <p class="account-name"></p>
+            <p class="account-schedule"></p>
+          </div>
+          <span class="status-pill"></span>
+        </div>
+
+        <div class="amount-block">
+          <strong class="primary-amount"></strong>
+          <p class="secondary-amount"></p>
+        </div>
+
+        <div class="account-meta"></div>
+
+        <div class="account-actions">
+          <button class="success-button mark-paid-button" type="button">
+            Marcar pago del mes
+          </button>
+          <button class="danger-button delete-button" type="button">
+            Eliminar
+          </button>
+        </div>
+      </article>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
