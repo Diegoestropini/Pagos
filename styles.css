@@ -110,7 +110,7 @@ body {
   min-width: 280px;
   max-width: 320px;
   border-radius: 24px;
-  padding: 22px;
+  padding: 20px 22px;
   align-self: flex-end;
 }
 
@@ -119,7 +119,7 @@ body {
 }
 
 .exchange-card strong {
-  font-size: 2rem;
+  font-size: 1.9rem;
   display: block;
   margin-bottom: 8px;
 }
@@ -226,7 +226,12 @@ button {
 button {
   border: 0;
   cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
 }
 
 button:hover {
@@ -237,10 +242,18 @@ button:active {
   transform: translateY(0);
 }
 
+button:focus-visible,
+.account-form input:focus-visible,
+.account-form select:focus-visible {
+  outline: 2px solid rgba(79, 183, 255, 0.85);
+  outline-offset: 2px;
+}
+
 .primary-button,
 .success-button,
 .ghost-button,
-.danger-button {
+.danger-button,
+.filter-button {
   border-radius: 16px;
   padding: 13px 16px;
   font-weight: 600;
@@ -261,9 +274,11 @@ button:active {
   color: white;
 }
 
-.ghost-button {
+.ghost-button,
+.filter-button {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text);
+  border: 1px solid transparent;
 }
 
 .danger-button {
@@ -325,6 +340,7 @@ button:disabled {
 .stat-card {
   border-radius: 24px;
   padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .stat-card p {
@@ -335,6 +351,62 @@ button:disabled {
 .stat-card strong {
   display: block;
   font-size: 1.9rem;
+}
+
+.stat-card-neutral {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+    var(--panel);
+}
+
+.stat-card-today {
+  background:
+    linear-gradient(180deg, rgba(255, 179, 72, 0.16), rgba(255, 179, 72, 0.03)),
+    var(--panel);
+  border-color: rgba(255, 179, 72, 0.18);
+}
+
+.stat-card-upcoming {
+  background:
+    linear-gradient(180deg, rgba(79, 183, 255, 0.16), rgba(79, 183, 255, 0.03)),
+    var(--panel);
+  border-color: rgba(79, 183, 255, 0.18);
+}
+
+.stat-card-overdue {
+  background:
+    linear-gradient(180deg, rgba(255, 92, 114, 0.18), rgba(255, 92, 114, 0.04)),
+    var(--panel);
+  border-color: rgba(255, 92, 114, 0.2);
+}
+
+.stat-card-today strong {
+  color: #ffd79d;
+}
+
+.stat-card-upcoming strong {
+  color: #b7e6ff;
+}
+
+.stat-card-overdue strong {
+  color: #ffb1bc;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.filter-button {
+  padding: 10px 14px;
+}
+
+.filter-button.is-active {
+  background: var(--blue-soft);
+  border-color: rgba(79, 183, 255, 0.28);
+  color: #dff3ff;
 }
 
 .account-list {
@@ -357,6 +429,11 @@ button:disabled {
   display: grid;
   gap: 16px;
   border-left-width: 5px;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.account-card:hover {
+  transform: translateY(-2px);
 }
 
 .account-card.status-upcoming {
@@ -469,6 +546,29 @@ button:disabled {
   flex: 1 1 180px;
 }
 
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 20;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(7, 16, 27, 0.96);
+  border: 1px solid rgba(79, 183, 255, 0.2);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @media (max-width: 980px) {
   .hero,
   .layout-grid {
@@ -501,17 +601,27 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
-  .form-actions {
-    display: grid;
-  }
-
+  .form-actions,
   .panel-header-row,
   .account-card-top,
   .account-actions {
     display: grid;
   }
 
-  .account-actions button {
+  .filter-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-actions button,
+  .filter-button {
     width: 100%;
+  }
+
+  .toast {
+    right: 14px;
+    left: 14px;
+    bottom: 14px;
+    max-width: none;
   }
 }

@@ -115,6 +115,21 @@
               </button>
             </div>
 
+            <div class="filter-bar" id="filterBar" aria-label="Filtrar cuentas">
+              <button class="filter-button is-active" type="button" data-filter="all">
+                Todas
+              </button>
+              <button class="filter-button" type="button" data-filter="pending">
+                Pendientes
+              </button>
+              <button class="filter-button" type="button" data-filter="overdue">
+                Vencidas
+              </button>
+              <button class="filter-button" type="button" data-filter="paid">
+                Pagadas
+              </button>
+            </div>
+
             <div id="accountList" class="account-list"></div>
           </section>
         </section>
@@ -154,6 +169,8 @@
         </div>
       </article>
     </template>
+
+    <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
 
     <script src="./app.js"></script>
   </body>

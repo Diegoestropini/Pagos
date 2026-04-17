@@ -16,13 +16,16 @@ const accountList = document.querySelector("#accountList");
 const statsGrid = document.querySelector("#statsGrid");
 const summaryText = document.querySelector("#summaryText");
 const clearPaidButton = document.querySelector("#clearPaidButton");
+const filterBar = document.querySelector("#filterBar");
 const exchangeRateValue = document.querySelector("#exchangeRateValue");
 const exchangeRateMeta = document.querySelector("#exchangeRateMeta");
 const accountCardTemplate = document.querySelector("#accountCardTemplate");
+const toast = document.querySelector("#toast");
 
 const state = {
   accounts: loadAccounts(),
   editingAccountId: null,
+  activeFilter: "all",
   exchangeRate:
     loadRateCache() || {
       rate: FALLBACK_USD_TO_UYU,
@@ -30,6 +33,8 @@ const state = {
       updatedAt: null,
     },
 };
+
+let toastTimeoutId = null;
 
 initialize();
 
@@ -44,6 +49,7 @@ function bindEvents() {
   accountForm.addEventListener("submit", handleSubmit);
   cancelEditButton.addEventListener("click", resetForm);
   clearPaidButton.addEventListener("click", clearPaidAccounts);
+  filterBar.addEventListener("click", handleFilterSelection);
 }
 
 function handleSubmit(event) {
@@ -57,6 +63,7 @@ function handleSubmit(event) {
   const currency = String(formData.get("currency") || "UYU");
 
   if (!name || !dueDate || !Number.isFinite(amount) || amount <= 0) {
+    showToast("Completá un nombre, fecha y monto válidos.");
     return;
   }
 
@@ -87,6 +94,8 @@ function handleSubmit(event) {
         updatedAt: new Date().toISOString(),
       };
     });
+
+    showToast("Cuenta actualizada.");
   } else {
     const account = {
       id: crypto.randomUUID(),
@@ -96,6 +105,7 @@ function handleSubmit(event) {
     };
 
     state.accounts.unshift(account);
+    showToast("Cuenta guardada.");
   }
 
   saveAccounts();
@@ -105,12 +115,43 @@ function handleSubmit(event) {
 
 function clearPaidAccounts() {
   const today = getLocalToday();
+  const paidAccounts = state.accounts.filter((account) => {
+    const details = buildAccountDetails(account, today, state.exchangeRate.rate);
+    return details.statusKey === "paid";
+  });
+
+  if (paidAccounts.length === 0) {
+    showToast("No hay cuentas pagadas para limpiar.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Se van a eliminar ${paidAccounts.length} cuenta${
+      paidAccounts.length === 1 ? "" : "s"
+    } marcada${paidAccounts.length === 1 ? "" : "s"} como pagada${paidAccounts.length === 1 ? "" : "s"}.`,
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
   state.accounts = state.accounts.filter((account) => {
     const details = buildAccountDetails(account, today, state.exchangeRate.rate);
     return details.statusKey !== "paid";
   });
 
   saveAccounts();
+  render();
+  showToast("Se limpiaron las cuentas pagadas.");
+}
+
+function handleFilterSelection(event) {
+  const button = event.target.closest("[data-filter]");
+  if (!button) {
+    return;
+  }
+
+  state.activeFilter = button.dataset.filter;
   render();
 }
 
@@ -121,56 +162,60 @@ function render() {
     .sort(sortAccounts);
 
   renderStats(detailsList, today);
+  renderFilters(detailsList);
   renderAccounts(detailsList);
   renderExchangeRate();
 }
 
 function renderStats(detailsList, today) {
-  const activeCount = detailsList.filter((item) => item.statusKey !== "paid").length;
-  const dueTodayCount = detailsList.filter(
-    (item) => item.statusKey !== "paid" && differenceInDays(today, item.currentDueDate) === 0,
+  const pendingDetails = detailsList.filter((item) => item.statusKey !== "paid");
+  const activeCount = pendingDetails.length;
+  const dueTodayCount = pendingDetails.filter(
+    (item) => differenceInDays(today, item.currentDueDate) === 0,
   ).length;
-  const dueThisWeekCount = detailsList.filter(
-    (item) =>
-      item.statusKey !== "paid" &&
-      differenceInDays(today, item.currentDueDate) >= 0 &&
-      differenceInDays(today, item.currentDueDate) <= 7,
-  ).length;
+  const dueThisWeekCount = pendingDetails.filter((item) => {
+    const days = differenceInDays(today, item.currentDueDate);
+    return days >= 0 && days <= 7;
+  }).length;
   const overdueTotalUyu = detailsList
     .filter((item) => item.statusKey === "overdue")
     .reduce((total, item) => total + item.totalEstimatedUyu, 0);
-  const totalEstimatedUyu = detailsList.reduce(
+  const totalPendingUyu = pendingDetails.reduce(
     (total, item) => total + item.totalEstimatedUyu,
     0,
   );
 
   const cards = [
     {
+      tone: "neutral",
       label: "Cuentas activas",
       value: String(activeCount),
       small: `${detailsList.length} registradas`,
     },
     {
+      tone: "today",
       label: "Vencen hoy",
       value: String(dueTodayCount),
       small: "Pagos que requieren atención inmediata",
     },
     {
+      tone: "upcoming",
       label: "Próximos 7 días",
       value: String(dueThisWeekCount),
       small: "Para anticiparte esta semana",
     },
     {
+      tone: "overdue",
       label: "Deuda vencida",
       value: formatCurrency(overdueTotalUyu, "UYU"),
-      small: `Total estimado a cubrir: ${formatCurrency(totalEstimatedUyu, "UYU")}`,
+      small: `Pendiente total: ${formatCurrency(totalPendingUyu, "UYU")}`,
     },
   ];
 
   statsGrid.innerHTML = cards
     .map(
       (card) => `
-        <article class="stat-card">
+        <article class="stat-card stat-card-${card.tone}">
           <p>${card.label}</p>
           <strong>${card.value}</strong>
           ${card.small ? `<p>${card.small}</p>` : ""}
@@ -182,7 +227,23 @@ function renderStats(detailsList, today) {
   summaryText.textContent =
     detailsList.length === 0
       ? "Todavía no hay pagos cargados."
-      : `${activeCount} cuenta${activeCount === 1 ? "" : "s"} activas. Total estimado pendiente: ${formatCurrency(totalEstimatedUyu, "UYU")}.`;
+      : `${activeCount} cuenta${activeCount === 1 ? "" : "s"} activas. Total pendiente: ${formatCurrency(totalPendingUyu, "UYU")}.`;
+}
+
+function renderFilters(detailsList) {
+  const counts = {
+    all: detailsList.length,
+    pending: detailsList.filter((item) => item.statusKey !== "paid").length,
+    overdue: detailsList.filter((item) => item.statusKey === "overdue").length,
+    paid: detailsList.filter((item) => item.statusKey === "paid").length,
+  };
+
+  filterBar.querySelectorAll("[data-filter]").forEach((button) => {
+    const filterKey = button.dataset.filter;
+    const label = button.textContent.split(" (")[0];
+    button.classList.toggle("is-active", filterKey === state.activeFilter);
+    button.textContent = `${label} (${counts[filterKey] || 0})`;
+  });
 }
 
 function renderAccounts(detailsList) {
@@ -198,9 +259,20 @@ function renderAccounts(detailsList) {
     return;
   }
 
+  const filteredDetails = detailsList.filter(matchesActiveFilter);
+
+  if (filteredDetails.length === 0) {
+    accountList.innerHTML = `
+      <div class="empty-state">
+        No hay cuentas para el filtro seleccionado.
+      </div>
+    `;
+    return;
+  }
+
   const fragment = document.createDocumentFragment();
 
-  detailsList.forEach((details) => {
+  filteredDetails.forEach((details) => {
     const node = accountCardTemplate.content.firstElementChild.cloneNode(true);
     node.classList.add(`status-${details.statusKey}`);
 
@@ -297,6 +369,7 @@ function markAsPaid(accountId) {
 
   saveAccounts();
   render();
+  showToast("Pago marcado.");
 }
 
 function undoLastPayment(accountId) {
@@ -314,10 +387,21 @@ function undoLastPayment(accountId) {
 
   saveAccounts();
   render();
+  showToast("Último pago desmarcado.");
 }
 
 function deleteAccount(accountId) {
-  state.accounts = state.accounts.filter((account) => account.id !== accountId);
+  const account = state.accounts.find((item) => item.id === accountId);
+  if (!account) {
+    return;
+  }
+
+  const confirmed = window.confirm(`Se va a eliminar la cuenta "${account.name}".`);
+  if (!confirmed) {
+    return;
+  }
+
+  state.accounts = state.accounts.filter((item) => item.id !== accountId);
 
   if (state.editingAccountId === accountId) {
     resetForm();
@@ -325,6 +409,7 @@ function deleteAccount(accountId) {
 
   saveAccounts();
   render();
+  showToast("Cuenta eliminada.");
 }
 
 function buildAccountDetails(account, today, exchangeRate) {
@@ -379,7 +464,13 @@ function buildAccountDetails(account, today, exchangeRate) {
     );
   } else if (statusKey === "overdue" && pendingInstallments === 1) {
     metaLines.push(
-      `El vencimiento fue ${daysUntilDue === 0 ? "hoy" : `hace ${Math.abs(daysUntilDue)} día${Math.abs(daysUntilDue) === 1 ? "" : "s"}`}.`,
+      `El vencimiento fue ${
+        daysUntilDue === 0
+          ? "hoy"
+          : `hace ${Math.abs(daysUntilDue)} día${
+              Math.abs(daysUntilDue) === 1 ? "" : "s"
+            }`
+      }.`,
     );
   } else {
     metaLines.push(`Próximo vencimiento: ${formatDate(currentDueDate)}.`);
@@ -406,6 +497,22 @@ function buildAccountDetails(account, today, exchangeRate) {
     daysUntilDue,
     currentDueDate,
   };
+}
+
+function matchesActiveFilter(details) {
+  if (state.activeFilter === "pending") {
+    return details.statusKey !== "paid";
+  }
+
+  if (state.activeFilter === "overdue") {
+    return details.statusKey === "overdue";
+  }
+
+  if (state.activeFilter === "paid") {
+    return details.statusKey === "paid";
+  }
+
+  return true;
 }
 
 function sortAccounts(a, b) {
@@ -542,6 +649,19 @@ function renderExchangeRate(withError = false) {
     : "Usando valor de respaldo";
 
   exchangeRateMeta.textContent = `${state.exchangeRate.source} · ${updatedText}`;
+}
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add("is-visible");
+
+  if (toastTimeoutId) {
+    window.clearTimeout(toastTimeoutId);
+  }
+
+  toastTimeoutId = window.setTimeout(() => {
+    toast.classList.remove("is-visible");
+  }, 2200);
 }
 
 function setDefaultDueDate() {
