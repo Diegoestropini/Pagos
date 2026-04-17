@@ -24,7 +24,6 @@ const cancelEditButton = document.querySelector("#cancelEditButton");
 const accountList = document.querySelector("#accountList");
 const statsGrid = document.querySelector("#statsGrid");
 const summaryText = document.querySelector("#summaryText");
-const clearPaidButton = document.querySelector("#clearPaidButton");
 const filterBar = document.querySelector("#filterBar");
 const exchangeRateValue = document.querySelector("#exchangeRateValue");
 const exchangeRateMeta = document.querySelector("#exchangeRateMeta");
@@ -71,14 +70,14 @@ function handleSubmit(event) {
   const currency = normalizeCurrency(formData.get("currency"));
 
   if (!name || !isValidIsoDate(dueDate) || !Number.isFinite(amount) || amount <= 0) {
-    showToast("Completá un nombre, fecha y monto válidos.");
+    showToast("Completa un nombre, fecha y monto validos.");
     return;
   }
 
   const dueDay = getDueDayFromDate(dueDate);
 
   if (!Number.isInteger(dueDay)) {
-    showToast("La fecha ingresada no es válida.");
+    showToast("La fecha ingresada no es valida.");
     return;
   }
 
@@ -103,8 +102,6 @@ function handleSubmit(event) {
         updatedAt: new Date().toISOString(),
       };
     });
-
-    showToast("Cuenta actualizada.");
   } else {
     state.accounts.unshift({
       id: crypto.randomUUID(),
@@ -114,17 +111,12 @@ function handleSubmit(event) {
       updatedAt: new Date().toISOString(),
       lastPaidAt: null,
     });
-
-    showToast("Cuenta guardada.");
   }
 
   saveAccounts();
   resetForm();
   render();
-}
-
-function clearPaidAccounts() {
-  showToast("Las cuentas mensuales pagadas se conservan para el siguiente ciclo.");
+  showToast(accountId ? "Cuenta actualizada." : "Cuenta guardada.");
 }
 
 function handleFilterSelection(event) {
@@ -141,21 +133,21 @@ function saveManualExchangeRate() {
   const nextRate = normalizePositiveAmount(exchangeRateInput.value);
 
   if (!Number.isFinite(nextRate) || nextRate <= 0) {
-    showToast("Ingresá una cotización válida mayor a cero.");
+    showToast("Ingresa una cotizacion valida mayor a cero.");
     return;
   }
 
   state.exchangeRate = buildManualRate(nextRate);
   saveRateCache();
   render();
-  showToast("Cotización guardada localmente.");
+  showToast("Cotizacion guardada localmente.");
 }
 
 function resetExchangeRate() {
   state.exchangeRate = buildFallbackRate();
   saveRateCache();
   render();
-  showToast("Se restableció la cotización de respaldo.");
+  showToast("Se restablecio la cotizacion de respaldo.");
 }
 
 function render() {
@@ -200,11 +192,11 @@ function renderStats(detailsList, today) {
       tone: "today",
       label: "Vencen hoy",
       value: String(dueTodayCount),
-      small: "Pagos que requieren atención inmediata",
+      small: "Pagos que requieren atencion inmediata",
     },
     {
       tone: "upcoming",
-      label: "Próximos 7 días",
+      label: "Proximos 7 dias",
       value: String(dueThisWeekCount),
       small: "Para anticiparte esta semana",
     },
@@ -241,7 +233,7 @@ function renderStats(detailsList, today) {
 
   summaryText.textContent =
     detailsList.length === 0
-      ? "Todavía no hay pagos cargados."
+      ? "Todavia no hay pagos cargados."
       : `${pendingDetails.length} cuenta${
           pendingDetails.length === 1 ? "" : "s"
         } activas. Total pendiente: ${formatCurrency(totalPendingUyu, "UYU")}.`;
@@ -268,7 +260,7 @@ function renderAccounts(detailsList) {
   if (detailsList.length === 0) {
     setEmptyState(
       accountList,
-      "Agregá tu primera cuenta y la app empezará a controlar vencimientos y pagos sin salir de tu navegador.",
+      "Agrega tu primera cuenta y la app empezara a controlar vencimientos y pagos sin salir de tu navegador.",
     );
     return;
   }
@@ -298,17 +290,20 @@ function renderAccounts(detailsList) {
 
     markPaidButton.disabled =
       details.statusKey === "paid" || details.statusKey === "scheduled";
-    markPaidButton.textContent =
-      details.statusKey === "scheduled"
-        ? "Aún no corresponde"
-        : details.pendingInstallments > 1
-          ? "Marcar al día"
-          : "Marcar pago del mes";
+
+    if (details.statusKey === "scheduled") {
+      markPaidButton.textContent = "Aun no corresponde";
+    } else if (details.pendingInstallments > 1) {
+      markPaidButton.textContent = "Registrar un pago";
+    } else {
+      markPaidButton.textContent = "Marcar pago del mes";
+    }
+
     markPaidButton.addEventListener("click", () => markAsPaid(details.account.id));
 
     undoPaidButton.disabled = !details.account.paidThroughMonth;
     undoPaidButton.textContent = details.account.paidThroughMonth
-      ? "Desmarcar último pago"
+      ? "Desmarcar ultimo pago"
       : "Sin pagos registrados";
     undoPaidButton.addEventListener("click", () => undoLastPayment(details.account.id));
 
@@ -350,7 +345,7 @@ function startEditing(accountId) {
   currencyInput.value = account.currency;
   formTitle.textContent = "Editar cuenta";
   formSubtitle.textContent =
-    "Ajustá nombre, vencimiento o monto sin perder el historial existente.";
+    "Ajusta nombre, vencimiento o monto sin perder el historial existente.";
   submitButton.textContent = "Guardar cambios";
   cancelEditButton.classList.remove("is-hidden");
   nameInput.focus();
@@ -363,7 +358,7 @@ function resetForm() {
   accountIdInput.value = "";
   formTitle.textContent = "Nueva cuenta";
   formSubtitle.textContent =
-    "Agregá pagos mensuales y dejalos guardados localmente.";
+    "Agrega pagos mensuales y dejalos guardados localmente.";
   submitButton.textContent = "Guardar cuenta";
   cancelEditButton.classList.add("is-hidden");
   setDefaultDueDate();
@@ -371,7 +366,6 @@ function resetForm() {
 
 function markAsPaid(accountId) {
   const today = getLocalToday();
-  const currentMonthKey = toMonthKey(today);
 
   state.accounts = state.accounts.map((account) => {
     if (account.id !== accountId) {
@@ -383,9 +377,14 @@ function markAsPaid(accountId) {
       return account;
     }
 
+    const nextPaidThroughMonth = getNextPaidThroughMonthSafe(account, today);
+    if (!nextPaidThroughMonth || nextPaidThroughMonth === account.paidThroughMonth) {
+      return account;
+    }
+
     return {
       ...account,
-      paidThroughMonth: currentMonthKey,
+      paidThroughMonth: nextPaidThroughMonth,
       lastPaidAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -393,7 +392,7 @@ function markAsPaid(accountId) {
 
   saveAccounts();
   render();
-  showToast("Pago marcado.");
+  showToast("Se registro un pago.");
 }
 
 function undoLastPayment(accountId) {
@@ -412,7 +411,7 @@ function undoLastPayment(accountId) {
 
   saveAccounts();
   render();
-  showToast("Último pago desmarcado.");
+  showToast("Ultimo pago desmarcado.");
 }
 
 function deleteAccount(accountId) {
@@ -476,10 +475,9 @@ function buildAccountDetails(account, today, exchangeRate) {
   const totalEstimatedUyu =
     account.currency === "USD" ? totalOriginal * exchangeRate : totalOriginal;
 
-  const scheduleLabel = `Mensual, vence cada ${account.dueDay} · inicia ${formatDate(
+  const scheduleLabel = `Mensual, vence cada ${account.dueDay} | inicia ${formatDate(
     parseLocalDate(account.startDate),
   )}`;
-
   const totalDisplay = isScheduled
     ? formatCurrency(account.amount, account.currency)
     : formatCurrency(totalOriginal, account.currency);
@@ -541,32 +539,32 @@ function buildMetaLines(
     metaLines.push(`Esta cuenta empieza a correr el ${formatDate(currentDueDate)}.`);
   } else if (pendingInstallments > 1) {
     metaLines.push(
-      `Tenés ${pendingInstallments} meses acumulados. La deuda ya incluye varios ciclos impagos.`,
+      `Tienes ${pendingInstallments} meses acumulados. La deuda ya incluye varios ciclos impagos.`,
     );
   } else if (statusKey === "paid") {
-    metaLines.push("La cuenta está marcada como pagada para el mes actual.");
+    metaLines.push("La cuenta esta marcada como pagada para el mes actual.");
   } else if (statusKey === "today") {
     metaLines.push("El vencimiento es hoy.");
   } else if (statusKey === "warning") {
     metaLines.push(
-      `Faltan ${daysUntilDue} día${daysUntilDue === 1 ? "" : "s"} para el vencimiento.`,
+      `Faltan ${daysUntilDue} dia${daysUntilDue === 1 ? "" : "s"} para el vencimiento.`,
     );
   } else if (statusKey === "overdue" && pendingInstallments === 1) {
     metaLines.push(
-      `El vencimiento fue hace ${Math.abs(daysUntilDue)} día${
+      `El vencimiento fue hace ${Math.abs(daysUntilDue)} dia${
         Math.abs(daysUntilDue) === 1 ? "" : "s"
       }.`,
     );
   } else {
-    metaLines.push(`Próximo vencimiento: ${formatDate(currentDueDate)}.`);
+    metaLines.push(`Proximo vencimiento: ${formatDate(currentDueDate)}.`);
   }
 
   if (account.currency === "USD") {
-    metaLines.push(`Cotización usada: ${formatRate(exchangeRate)} por USD.`);
+    metaLines.push(`Cotizacion usada: ${formatRate(exchangeRate)} por USD.`);
   }
 
   if (account.lastPaidAt) {
-    metaLines.push(`Último cambio de pago: ${formatDateTime(account.lastPaidAt)}.`);
+    metaLines.push(`Ultimo cambio de pago: ${formatDateTime(account.lastPaidAt)}.`);
   }
 
   return metaLines;
@@ -604,7 +602,7 @@ function renderExchangeRate() {
     ? `Actualizado ${formatDateTime(state.exchangeRate.updatedAt)}`
     : "Usando valor de respaldo";
 
-  exchangeRateMeta.textContent = `${state.exchangeRate.source} · ${updatedText}`;
+  exchangeRateMeta.textContent = `${state.exchangeRate.source} | ${updatedText}`;
 }
 
 function showToast(message) {
@@ -641,7 +639,7 @@ function loadRateCache() {
   try {
     return sanitizeRate(JSON.parse(localStorage.getItem(RATE_CACHE_KEY) || "null"));
   } catch (error) {
-    console.error("No se pudo cargar la cotización guardada.", error);
+    console.error("No se pudo cargar la cotizacion guardada.", error);
     return buildFallbackRate();
   }
 }
@@ -910,100 +908,4 @@ function getNextPaidThroughMonthSafe(account, today) {
     : startMonthKey;
 
   return monthDiff(nextMonthKey, currentMonthKey) >= 0 ? nextMonthKey : currentMonthKey;
-}
-
-function renderAccounts(detailsList) {
-  if (detailsList.length === 0) {
-    setEmptyState(
-      accountList,
-      "Agrega tu primera cuenta y la app empezara a controlar vencimientos y pagos sin salir de tu navegador.",
-    );
-    return;
-  }
-
-  const filteredDetails = detailsList.filter(matchesActiveFilter);
-
-  if (filteredDetails.length === 0) {
-    setEmptyState(accountList, "No hay cuentas para el filtro seleccionado.");
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-
-  filteredDetails.forEach((details) => {
-    const node = accountCardTemplate.content.firstElementChild.cloneNode(true);
-    node.classList.add(`status-${details.statusKey}`);
-
-    node.querySelector(".account-name").textContent = details.account.name;
-    node.querySelector(".account-schedule").textContent = details.scheduleLabel;
-    node.querySelector(".status-pill").textContent = details.statusLabel;
-    node.querySelector(".primary-amount").textContent = details.totalDisplay;
-    node.querySelector(".secondary-amount").textContent = details.secondaryAmount;
-    renderMeta(node.querySelector(".account-meta"), details.metaLines);
-
-    const markPaidButton = node.querySelector(".mark-paid-button");
-    const undoPaidButton = node.querySelector(".undo-paid-button");
-
-    markPaidButton.disabled =
-      details.statusKey === "paid" || details.statusKey === "scheduled";
-
-    if (details.statusKey === "scheduled") {
-      markPaidButton.textContent = "Aun no corresponde";
-    } else if (details.pendingInstallments > 1) {
-      markPaidButton.textContent = "Registrar un pago";
-    } else {
-      markPaidButton.textContent = "Marcar pago del mes";
-    }
-
-    markPaidButton.addEventListener("click", () => markAsPaid(details.account.id));
-
-    undoPaidButton.disabled = !details.account.paidThroughMonth;
-    undoPaidButton.textContent = details.account.paidThroughMonth
-      ? "Desmarcar ultimo pago"
-      : "Sin pagos registrados";
-    undoPaidButton.addEventListener("click", () => undoLastPayment(details.account.id));
-
-    node
-      .querySelector(".edit-button")
-      .addEventListener("click", () => startEditing(details.account.id));
-
-    node
-      .querySelector(".delete-button")
-      .addEventListener("click", () => deleteAccount(details.account.id));
-
-    fragment.appendChild(node);
-  });
-
-  accountList.replaceChildren(fragment);
-}
-
-function markAsPaid(accountId) {
-  const today = getLocalToday();
-
-  state.accounts = state.accounts.map((account) => {
-    if (account.id !== accountId) {
-      return account;
-    }
-
-    const details = buildAccountDetails(account, today, state.exchangeRate.rate);
-    if (details.statusKey === "scheduled") {
-      return account;
-    }
-
-    const nextPaidThroughMonth = getNextPaidThroughMonthSafe(account, today);
-    if (!nextPaidThroughMonth || nextPaidThroughMonth === account.paidThroughMonth) {
-      return account;
-    }
-
-    return {
-      ...account,
-      paidThroughMonth: nextPaidThroughMonth,
-      lastPaidAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-  });
-
-  saveAccounts();
-  render();
-  showToast("Se registro un pago.");
 }
