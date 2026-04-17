@@ -185,6 +185,26 @@ button {
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
+.account-form select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #cfe3f7 50%),
+    linear-gradient(135deg, #cfe3f7 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+.account-form select option {
+  background: #0d1724;
+  color: #f3f7fb;
+}
+
 .account-form input:focus,
 .account-form select:focus {
   border-color: rgba(79, 183, 255, 0.55);
