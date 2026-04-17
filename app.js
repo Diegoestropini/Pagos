@@ -55,7 +55,6 @@ function initialize() {
 function bindEvents() {
   accountForm.addEventListener("submit", handleSubmit);
   cancelEditButton.addEventListener("click", resetForm);
-  clearPaidButton.addEventListener("click", clearPaidAccounts);
   filterBar.addEventListener("click", handleFilterSelection);
   saveExchangeRateButton.addEventListener("click", saveManualExchangeRate);
   resetExchangeRateButton.addEventListener("click", resetExchangeRate);
@@ -125,37 +124,7 @@ function handleSubmit(event) {
 }
 
 function clearPaidAccounts() {
-  const today = getLocalToday();
-  const paidAccounts = state.accounts.filter((account) => {
-    const details = buildAccountDetails(account, today, state.exchangeRate.rate);
-    return details.statusKey === "paid";
-  });
-
-  if (paidAccounts.length === 0) {
-    showToast("No hay cuentas pagadas para limpiar.");
-    return;
-  }
-
-  const confirmed = window.confirm(
-    `Se van a eliminar ${paidAccounts.length} cuenta${
-      paidAccounts.length === 1 ? "" : "s"
-    } marcada${paidAccounts.length === 1 ? "" : "s"} como pagada${
-      paidAccounts.length === 1 ? "" : "s"
-    }.`,
-  );
-
-  if (!confirmed) {
-    return;
-  }
-
-  state.accounts = state.accounts.filter((account) => {
-    const details = buildAccountDetails(account, today, state.exchangeRate.rate);
-    return details.statusKey !== "paid";
-  });
-
-  saveAccounts();
-  render();
-  showToast("Se limpiaron las cuentas pagadas.");
+  showToast("Las cuentas mensuales pagadas se conservan para el siguiente ciclo.");
 }
 
 function handleFilterSelection(event) {
@@ -926,4 +895,115 @@ function formatRate(value) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+function shiftMonthKeySafe(monthKey, delta) {
+  const [year, month] = monthKey.split("-").map(Number);
+  return toMonthKey(new Date(year, month - 1 + delta, 1));
+}
+
+function getNextPaidThroughMonthSafe(account, today) {
+  const startMonthKey = toMonthKey(parseLocalDate(account.startDate));
+  const currentMonthKey = toMonthKey(today);
+  const nextMonthKey = account.paidThroughMonth
+    ? shiftMonthKeySafe(account.paidThroughMonth, 1)
+    : startMonthKey;
+
+  return monthDiff(nextMonthKey, currentMonthKey) >= 0 ? nextMonthKey : currentMonthKey;
+}
+
+function renderAccounts(detailsList) {
+  if (detailsList.length === 0) {
+    setEmptyState(
+      accountList,
+      "Agrega tu primera cuenta y la app empezara a controlar vencimientos y pagos sin salir de tu navegador.",
+    );
+    return;
+  }
+
+  const filteredDetails = detailsList.filter(matchesActiveFilter);
+
+  if (filteredDetails.length === 0) {
+    setEmptyState(accountList, "No hay cuentas para el filtro seleccionado.");
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  filteredDetails.forEach((details) => {
+    const node = accountCardTemplate.content.firstElementChild.cloneNode(true);
+    node.classList.add(`status-${details.statusKey}`);
+
+    node.querySelector(".account-name").textContent = details.account.name;
+    node.querySelector(".account-schedule").textContent = details.scheduleLabel;
+    node.querySelector(".status-pill").textContent = details.statusLabel;
+    node.querySelector(".primary-amount").textContent = details.totalDisplay;
+    node.querySelector(".secondary-amount").textContent = details.secondaryAmount;
+    renderMeta(node.querySelector(".account-meta"), details.metaLines);
+
+    const markPaidButton = node.querySelector(".mark-paid-button");
+    const undoPaidButton = node.querySelector(".undo-paid-button");
+
+    markPaidButton.disabled =
+      details.statusKey === "paid" || details.statusKey === "scheduled";
+
+    if (details.statusKey === "scheduled") {
+      markPaidButton.textContent = "Aun no corresponde";
+    } else if (details.pendingInstallments > 1) {
+      markPaidButton.textContent = "Registrar un pago";
+    } else {
+      markPaidButton.textContent = "Marcar pago del mes";
+    }
+
+    markPaidButton.addEventListener("click", () => markAsPaid(details.account.id));
+
+    undoPaidButton.disabled = !details.account.paidThroughMonth;
+    undoPaidButton.textContent = details.account.paidThroughMonth
+      ? "Desmarcar ultimo pago"
+      : "Sin pagos registrados";
+    undoPaidButton.addEventListener("click", () => undoLastPayment(details.account.id));
+
+    node
+      .querySelector(".edit-button")
+      .addEventListener("click", () => startEditing(details.account.id));
+
+    node
+      .querySelector(".delete-button")
+      .addEventListener("click", () => deleteAccount(details.account.id));
+
+    fragment.appendChild(node);
+  });
+
+  accountList.replaceChildren(fragment);
+}
+
+function markAsPaid(accountId) {
+  const today = getLocalToday();
+
+  state.accounts = state.accounts.map((account) => {
+    if (account.id !== accountId) {
+      return account;
+    }
+
+    const details = buildAccountDetails(account, today, state.exchangeRate.rate);
+    if (details.statusKey === "scheduled") {
+      return account;
+    }
+
+    const nextPaidThroughMonth = getNextPaidThroughMonthSafe(account, today);
+    if (!nextPaidThroughMonth || nextPaidThroughMonth === account.paidThroughMonth) {
+      return account;
+    }
+
+    return {
+      ...account,
+      paidThroughMonth: nextPaidThroughMonth,
+      lastPaidAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  saveAccounts();
+  render();
+  showToast("Se registro un pago.");
 }
