@@ -157,6 +157,12 @@ body {
   margin-top: 22px;
 }
 
+.form-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .account-form label {
   display: grid;
   gap: 8px;
@@ -240,6 +246,10 @@ button:active {
   font-weight: 600;
 }
 
+.is-hidden {
+  display: none;
+}
+
 .primary-button {
   background: linear-gradient(135deg, #3aa9ff, #1669ff);
   color: white;
@@ -259,6 +269,13 @@ button:active {
 .danger-button {
   background: rgba(255, 92, 114, 0.12);
   color: #ff8b9c;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .legend {
@@ -301,7 +318,7 @@ button:active {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -434,10 +451,22 @@ button:active {
   line-height: 1.5;
 }
 
+.account-meta p {
+  margin: 0;
+}
+
+.account-meta p + p {
+  margin-top: 6px;
+}
+
 .account-actions {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.account-actions button {
+  flex: 1 1 180px;
 }
 
 @media (max-width: 980px) {
@@ -449,6 +478,10 @@ button:active {
 
   .exchange-card {
     max-width: none;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -468,9 +501,17 @@ button:active {
     grid-template-columns: 1fr;
   }
 
+  .form-actions {
+    display: grid;
+  }
+
   .panel-header-row,
   .account-card-top,
   .account-actions {
     display: grid;
+  }
+
+  .account-actions button {
+    width: 100%;
   }
 }
