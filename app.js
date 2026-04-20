@@ -70,14 +70,14 @@ function handleSubmit(event) {
   const currency = normalizeCurrency(formData.get("currency"));
 
   if (!name || !isValidIsoDate(dueDate) || !Number.isFinite(amount) || amount <= 0) {
-    showToast("Completa un nombre, fecha y monto validos.");
+    showToast("Completa un nombre, fecha y monto válidos.");
     return;
   }
 
   const dueDay = getDueDayFromDate(dueDate);
 
   if (!Number.isInteger(dueDay)) {
-    showToast("La fecha ingresada no es valida.");
+    showToast("La fecha ingresada no es válida.");
     return;
   }
 
@@ -98,7 +98,7 @@ function handleSubmit(event) {
       return {
         ...account,
         ...baseAccount,
-        paidThroughMonth: clampPaidThroughMonth(account.paidThroughMonth, dueDate),
+        payments: rebasePayments(account.payments, account.startDate, dueDate),
         updatedAt: new Date().toISOString(),
       };
     });
@@ -106,10 +106,9 @@ function handleSubmit(event) {
     state.accounts.unshift({
       id: crypto.randomUUID(),
       ...baseAccount,
-      paidThroughMonth: null,
+      payments: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      lastPaidAt: null,
     });
   }
 
@@ -133,21 +132,21 @@ function saveManualExchangeRate() {
   const nextRate = normalizePositiveAmount(exchangeRateInput.value);
 
   if (!Number.isFinite(nextRate) || nextRate <= 0) {
-    showToast("Ingresa una cotizacion valida mayor a cero.");
+    showToast("Ingresa una cotización válida mayor a cero.");
     return;
   }
 
   state.exchangeRate = buildManualRate(nextRate);
   saveRateCache();
   render();
-  showToast("Cotizacion guardada localmente.");
+  showToast("Cotización guardada localmente.");
 }
 
 function resetExchangeRate() {
   state.exchangeRate = buildFallbackRate();
   saveRateCache();
   render();
-  showToast("Se restablecio la cotizacion de respaldo.");
+  showToast("Se restableció la cotización de respaldo.");
 }
 
 function render() {
@@ -163,48 +162,55 @@ function render() {
 }
 
 function renderStats(detailsList, today) {
-  const pendingDetails = detailsList.filter((item) => item.statusKey !== "paid");
-  const dueTodayCount = pendingDetails.filter((item) => item.statusKey === "today").length;
-  const dueThisWeekCount = pendingDetails.filter((item) => {
-    if (item.statusKey === "scheduled") {
-      return false;
-    }
-
+  const scheduledDetails = detailsList.filter((item) => item.statusKey === "scheduled");
+  const actionableDetails = detailsList.filter(
+    (item) => item.statusKey !== "paid" && item.statusKey !== "scheduled",
+  );
+  const overdueEntries = detailsList.filter((item) => item.statusKey === "overdue");
+  const dueThisWeekCount = actionableDetails.filter((item) => {
     const days = differenceInDays(today, item.currentDueDate);
     return days >= 0 && days <= 7;
   }).length;
-  const overdueTotalUyu = detailsList
-    .filter((item) => item.statusKey === "overdue")
-    .reduce((total, item) => total + item.totalEstimatedUyu, 0);
-  const totalPendingUyu = pendingDetails.reduce(
+  const actionableTotalUyu = actionableDetails.reduce(
     (total, item) => total + item.totalEstimatedUyu,
+    0,
+  );
+  const overdueTotalUyu = overdueEntries.reduce(
+    (total, item) => total + item.totalEstimatedUyu,
+    0,
+  );
+  const scheduledMonthlyUyu = scheduledDetails.reduce(
+    (total, item) => total + item.monthlyEstimatedUyu,
     0,
   );
 
   const cards = [
     {
+      tone: "upcoming",
+      label: "Exigibles este mes",
+      value: String(actionableDetails.length),
+      small: `Pendiente: ${formatCurrency(actionableTotalUyu, "UYU")}`,
+    },
+    {
       tone: "neutral",
-      label: "Cuentas activas",
-      value: String(pendingDetails.length),
-      small: `${detailsList.length} registradas`,
+      label: "Programadas",
+      value: String(scheduledDetails.length),
+      small:
+        scheduledDetails.length === 0
+          ? "Sin cuentas futuras"
+          : `Proyección mensual: ${formatCurrency(scheduledMonthlyUyu, "UYU")}`,
     },
     {
       tone: "today",
-      label: "Vencen hoy",
-      value: String(dueTodayCount),
-      small: "Pagos que requieren atencion inmediata",
-    },
-    {
-      tone: "upcoming",
-      label: "Proximos 7 dias",
+      label: "Próximos 7 días",
       value: String(dueThisWeekCount),
-      small: "Para anticiparte esta semana",
+      small: "Pagos para anticiparte esta semana",
     },
     {
       tone: "overdue",
-      label: "Deuda vencida",
+      label: "Vencidas / acumuladas",
       value: formatCurrency(overdueTotalUyu, "UYU"),
-      small: `Pendiente total: ${formatCurrency(totalPendingUyu, "UYU")}`,
+      small: `${overdueEntries.length} cuenta${overdueEntries.length === 1 ? "" : "s"} con atraso`,
     },
   ];
 
@@ -233,16 +239,20 @@ function renderStats(detailsList, today) {
 
   summaryText.textContent =
     detailsList.length === 0
-      ? "Todavia no hay pagos cargados."
-      : `${pendingDetails.length} cuenta${
-          pendingDetails.length === 1 ? "" : "s"
-        } activas. Total pendiente: ${formatCurrency(totalPendingUyu, "UYU")}.`;
+      ? "Todavía no hay pagos cargados."
+      : `${actionableDetails.length} exigible${
+          actionableDetails.length === 1 ? "" : "s"
+        } este mes, ${scheduledDetails.length} programada${
+          scheduledDetails.length === 1 ? "" : "s"
+        } y ${formatCurrency(actionableTotalUyu, "UYU")} pendientes.`;
 }
 
 function renderFilters(detailsList) {
   const counts = {
     all: detailsList.length,
-    pending: detailsList.filter((item) => item.statusKey !== "paid").length,
+    pending: detailsList.filter(
+      (item) => item.statusKey !== "paid" && item.statusKey !== "scheduled",
+    ).length,
     overdue: detailsList.filter((item) => item.statusKey === "overdue").length,
     paid: detailsList.filter((item) => item.statusKey === "paid").length,
   };
@@ -260,7 +270,7 @@ function renderAccounts(detailsList) {
   if (detailsList.length === 0) {
     setEmptyState(
       accountList,
-      "Agrega tu primera cuenta y la app empezara a controlar vencimientos y pagos sin salir de tu navegador.",
+      "Agrega tu primera cuenta y la app empezará a controlar vencimientos y pagos sin salir de tu navegador.",
     );
     return;
   }
@@ -292,18 +302,18 @@ function renderAccounts(detailsList) {
       details.statusKey === "paid" || details.statusKey === "scheduled";
 
     if (details.statusKey === "scheduled") {
-      markPaidButton.textContent = "Aun no corresponde";
-    } else if (details.pendingInstallments > 1) {
-      markPaidButton.textContent = "Registrar un pago";
+      markPaidButton.textContent = "Aún no corresponde";
+    } else if (details.nextPaymentShortLabel) {
+      markPaidButton.textContent = `Pagar ${details.nextPaymentShortLabel}`;
     } else {
       markPaidButton.textContent = "Marcar pago del mes";
     }
 
     markPaidButton.addEventListener("click", () => markAsPaid(details.account.id));
 
-    undoPaidButton.disabled = !details.account.paidThroughMonth;
-    undoPaidButton.textContent = details.account.paidThroughMonth
-      ? "Desmarcar ultimo pago"
+    undoPaidButton.disabled = !details.lastPayment;
+    undoPaidButton.textContent = details.lastPayment
+      ? `Deshacer ${details.lastPaymentShortLabel}`
       : "Sin pagos registrados";
     undoPaidButton.addEventListener("click", () => undoLastPayment(details.account.id));
 
@@ -358,7 +368,7 @@ function resetForm() {
   accountIdInput.value = "";
   formTitle.textContent = "Nueva cuenta";
   formSubtitle.textContent =
-    "Agrega pagos mensuales y dejalos guardados localmente.";
+    "Agregá pagos mensuales y dejalos guardados localmente.";
   submitButton.textContent = "Guardar cuenta";
   cancelEditButton.classList.add("is-hidden");
   setDefaultDueDate();
@@ -377,41 +387,44 @@ function markAsPaid(accountId) {
       return account;
     }
 
-    const nextPaidThroughMonth = getNextPaidThroughMonthSafe(account, today);
-    if (!nextPaidThroughMonth || nextPaidThroughMonth === account.paidThroughMonth) {
+    const nextPayment = buildNextPaymentRecord(account, today, state.exchangeRate.rate);
+    if (!nextPayment) {
       return account;
     }
 
     return {
       ...account,
-      paidThroughMonth: nextPaidThroughMonth,
-      lastPaidAt: new Date().toISOString(),
+      payments: [...account.payments, nextPayment],
       updatedAt: new Date().toISOString(),
     };
   });
 
   saveAccounts();
   render();
-  showToast("Se registro un pago.");
+  showToast("Se registró un pago.");
 }
 
 function undoLastPayment(accountId) {
   state.accounts = state.accounts.map((account) => {
-    if (account.id !== accountId || !account.paidThroughMonth) {
+    if (account.id !== accountId || account.payments.length === 0) {
+      return account;
+    }
+
+    const paymentToRemove = getLastPayment(account);
+    if (!paymentToRemove) {
       return account;
     }
 
     return {
       ...account,
-      paidThroughMonth: getPreviousMonthKey(account.paidThroughMonth, account.startDate),
-      lastPaidAt: new Date().toISOString(),
+      payments: account.payments.filter((payment) => payment.id !== paymentToRemove.id),
       updatedAt: new Date().toISOString(),
     };
   });
 
   saveAccounts();
   render();
-  showToast("Ultimo pago desmarcado.");
+  showToast("Último pago desmarcado.");
 }
 
 function deleteAccount(accountId) {
@@ -440,9 +453,8 @@ function buildAccountDetails(account, today, exchangeRate) {
   const currentMonthKey = toMonthKey(today);
   const startMonthKey = toMonthKey(parseLocalDate(account.startDate));
   const cyclesDue = Math.max(0, monthDiff(startMonthKey, currentMonthKey) + 1);
-  const paidCycles = account.paidThroughMonth
-    ? Math.max(0, monthDiff(startMonthKey, account.paidThroughMonth) + 1)
-    : 0;
+  const paymentCoverage = getPaymentCoverage(account, startMonthKey);
+  const paidCycles = paymentCoverage.count;
   const pendingInstallments = Math.max(0, cyclesDue - paidCycles);
   const currentDueDate =
     cyclesDue > 0
@@ -474,6 +486,18 @@ function buildAccountDetails(account, today, exchangeRate) {
   const totalOriginal = account.amount * pendingInstallments;
   const totalEstimatedUyu =
     account.currency === "USD" ? totalOriginal * exchangeRate : totalOriginal;
+  const monthlyEstimatedUyu =
+    account.currency === "USD" ? account.amount * exchangeRate : account.amount;
+  const nextPaymentMonthKey =
+    pendingInstallments > 0 ? shiftMonthKeySafe(startMonthKey, paidCycles) : null;
+  const nextPaymentLabel = nextPaymentMonthKey ? formatMonthKey(nextPaymentMonthKey) : null;
+  const nextPaymentShortLabel = nextPaymentMonthKey
+    ? formatMonthKeyShort(nextPaymentMonthKey)
+    : null;
+  const remainingAfterNext = Math.max(0, pendingInstallments - 1);
+  const lastPayment = getLastPayment(account);
+  const lastPaymentLabel = lastPayment ? formatMonthKey(lastPayment.monthKey) : null;
+  const lastPaymentShortLabel = lastPayment ? formatMonthKeyShort(lastPayment.monthKey) : null;
 
   const scheduleLabel = `Mensual, vence cada ${account.dueDay} | inicia ${formatDate(
     parseLocalDate(account.startDate),
@@ -494,6 +518,10 @@ function buildAccountDetails(account, today, exchangeRate) {
     currentDueDate,
     daysUntilDue,
     exchangeRate,
+    nextPaymentLabel,
+    remainingAfterNext,
+    lastPayment,
+    lastPaymentLabel,
   );
 
   return {
@@ -502,12 +530,16 @@ function buildAccountDetails(account, today, exchangeRate) {
     statusLabel,
     pendingInstallments,
     totalEstimatedUyu,
+    monthlyEstimatedUyu,
     totalDisplay,
     secondaryAmount,
     scheduleLabel,
     metaLines,
     daysUntilDue,
     currentDueDate,
+    nextPaymentShortLabel,
+    lastPayment,
+    lastPaymentShortLabel,
   };
 }
 
@@ -532,6 +564,10 @@ function buildMetaLines(
   currentDueDate,
   daysUntilDue,
   exchangeRate,
+  nextPaymentLabel,
+  remainingAfterNext,
+  lastPayment,
+  lastPaymentLabel,
 ) {
   const metaLines = [];
 
@@ -541,30 +577,47 @@ function buildMetaLines(
     metaLines.push(
       `Tienes ${pendingInstallments} meses acumulados. La deuda ya incluye varios ciclos impagos.`,
     );
+    metaLines.push(
+      `Si registras un pago ahora, cancelas ${nextPaymentLabel} y quedarán ${remainingAfterNext} pendientes.`,
+    );
   } else if (statusKey === "paid") {
-    metaLines.push("La cuenta esta marcada como pagada para el mes actual.");
+    metaLines.push("La cuenta está marcada como pagada para el mes actual.");
   } else if (statusKey === "today") {
     metaLines.push("El vencimiento es hoy.");
   } else if (statusKey === "warning") {
     metaLines.push(
-      `Faltan ${daysUntilDue} dia${daysUntilDue === 1 ? "" : "s"} para el vencimiento.`,
+      `Faltan ${daysUntilDue} día${daysUntilDue === 1 ? "" : "s"} para el vencimiento.`,
     );
   } else if (statusKey === "overdue" && pendingInstallments === 1) {
     metaLines.push(
-      `El vencimiento fue hace ${Math.abs(daysUntilDue)} dia${
+      `El vencimiento fue hace ${Math.abs(daysUntilDue)} día${
         Math.abs(daysUntilDue) === 1 ? "" : "s"
       }.`,
     );
   } else {
-    metaLines.push(`Proximo vencimiento: ${formatDate(currentDueDate)}.`);
+    metaLines.push(`Próximo vencimiento: ${formatDate(currentDueDate)}.`);
+  }
+
+  if (
+    pendingInstallments === 1 &&
+    statusKey !== "paid" &&
+    statusKey !== "scheduled" &&
+    nextPaymentLabel
+  ) {
+    metaLines.push(`Si lo pagas ahora, quedará al día con ${nextPaymentLabel}.`);
   }
 
   if (account.currency === "USD") {
-    metaLines.push(`Cotizacion usada: ${formatRate(exchangeRate)} por USD.`);
+    metaLines.push(`Cotización usada: ${formatRate(exchangeRate)} por USD.`);
   }
 
-  if (account.lastPaidAt) {
-    metaLines.push(`Ultimo cambio de pago: ${formatDateTime(account.lastPaidAt)}.`);
+  if (lastPayment && lastPaymentLabel) {
+    metaLines.push(
+      `Último pago registrado: ${lastPaymentLabel} por ${formatCurrency(
+        lastPayment.amount,
+        lastPayment.currency,
+      )} el ${formatDateTime(lastPayment.paidAt)}.`,
+    );
   }
 
   return metaLines;
@@ -572,7 +625,7 @@ function buildMetaLines(
 
 function matchesActiveFilter(details) {
   if (state.activeFilter === "pending") {
-    return details.statusKey !== "paid";
+    return details.statusKey !== "paid" && details.statusKey !== "scheduled";
   }
 
   if (state.activeFilter === "overdue") {
@@ -639,7 +692,7 @@ function loadRateCache() {
   try {
     return sanitizeRate(JSON.parse(localStorage.getItem(RATE_CACHE_KEY) || "null"));
   } catch (error) {
-    console.error("No se pudo cargar la cotizacion guardada.", error);
+    console.error("No se pudo cargar la cotización guardada.", error);
     return buildFallbackRate();
   }
 }
@@ -677,7 +730,6 @@ function sanitizeAccount(value) {
   const currency = normalizeCurrency(value.currency);
   const createdAt = sanitizeIsoDateTime(value.createdAt);
   const updatedAt = sanitizeIsoDateTime(value.updatedAt) || createdAt;
-  const lastPaidAt = sanitizeIsoDateTime(value.lastPaidAt);
 
   if (
     !id ||
@@ -699,10 +751,16 @@ function sanitizeAccount(value) {
     dueDay,
     amount,
     currency,
-    paidThroughMonth: sanitizeMonthKey(value.paidThroughMonth, startDate),
+    payments: sanitizePayments(value.payments, {
+      startDate,
+      amount,
+      currency,
+      paidThroughMonth: sanitizeMonthKey(value.paidThroughMonth, startDate),
+      legacyPaidAt:
+        sanitizeIsoDateTime(value.lastPaidAt) || updatedAt || createdAt || new Date().toISOString(),
+    }),
     createdAt: createdAt || new Date().toISOString(),
     updatedAt: updatedAt || new Date().toISOString(),
-    lastPaidAt,
   };
 }
 
@@ -774,25 +832,106 @@ function sanitizeMonthKey(value, startDate) {
     return null;
   }
 
-  return clampPaidThroughMonth(value, startDate);
+  const startMonthKey = toMonthKey(parseLocalDate(startDate));
+  return monthDiff(startMonthKey, value) >= 0 ? value : null;
 }
 
-function clampPaidThroughMonth(paidThroughMonth, startDate) {
-  if (!paidThroughMonth) {
+function sanitizePayments(value, legacyConfig) {
+  if (!Array.isArray(value) || value.length === 0) {
+    return migrateLegacyPayments(legacyConfig);
+  }
+
+  const validPayments = value
+    .map((payment) => sanitizePayment(payment, legacyConfig))
+    .filter((payment) => payment !== null);
+
+  if (validPayments.length === 0) {
+    return migrateLegacyPayments(legacyConfig);
+  }
+
+  const byMonth = new Map();
+
+  validPayments
+    .sort(comparePayments)
+    .forEach((payment) => {
+      byMonth.set(payment.monthKey, payment);
+    });
+
+  return [...byMonth.values()].sort(comparePayments);
+}
+
+function sanitizePayment(value, legacyConfig) {
+  if (!value || typeof value !== "object") {
     return null;
   }
 
-  const startMonthKey = toMonthKey(parseLocalDate(startDate));
-  return monthDiff(startMonthKey, paidThroughMonth) >= 0 ? paidThroughMonth : null;
+  const monthKey = sanitizeMonthKey(value.monthKey, legacyConfig.startDate);
+  const paidAt = sanitizeIsoDateTime(value.paidAt);
+  const amount = normalizePositiveAmount(value.amount);
+  const currency = normalizeCurrency(value.currency || legacyConfig.currency);
+  const estimatedUyu = normalizePositiveAmount(value.estimatedUyu);
+  const exchangeRateUsed = normalizePositiveAmount(value.exchangeRateUsed);
+  const id =
+    typeof value.id === "string" && value.id.trim() ? value.id.trim().slice(0, 120) : null;
+
+  if (!monthKey || !paidAt || !Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+
+  return {
+    id: id || crypto.randomUUID(),
+    monthKey,
+    paidAt,
+    amount,
+    currency,
+    estimatedUyu:
+      Number.isFinite(estimatedUyu) && estimatedUyu > 0
+        ? estimatedUyu
+        : currency === "USD"
+          ? amount * FALLBACK_USD_TO_UYU
+          : amount,
+    exchangeRateUsed:
+      currency === "USD" && Number.isFinite(exchangeRateUsed) && exchangeRateUsed > 0
+        ? exchangeRateUsed
+        : null,
+    inferred: Boolean(value.inferred),
+  };
 }
 
-function getPreviousMonthKey(currentMonthKey, startDate) {
-  const currentDate = buildDateForMonth(currentMonthKey, 1);
-  const previousDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-  const previousMonthKey = toMonthKey(previousDate);
-  const startMonthKey = toMonthKey(parseLocalDate(startDate));
+function migrateLegacyPayments({ startDate, amount, currency, paidThroughMonth, legacyPaidAt }) {
+  if (!paidThroughMonth) {
+    return [];
+  }
 
-  return monthDiff(startMonthKey, previousMonthKey) >= 0 ? previousMonthKey : null;
+  const startMonthKey = toMonthKey(parseLocalDate(startDate));
+  const totalMonths = monthDiff(startMonthKey, paidThroughMonth) + 1;
+
+  return Array.from({ length: totalMonths }, (_, index) => {
+    const monthKey = shiftMonthKeySafe(startMonthKey, index);
+    return {
+      id: crypto.randomUUID(),
+      monthKey,
+      paidAt: legacyPaidAt,
+      amount,
+      currency,
+      estimatedUyu: currency === "USD" ? amount * FALLBACK_USD_TO_UYU : amount,
+      exchangeRateUsed: currency === "USD" ? FALLBACK_USD_TO_UYU : null,
+      inferred: true,
+    };
+  });
+}
+
+function rebasePayments(payments, previousStartDate, nextStartDate) {
+  const previousStartMonthKey = toMonthKey(parseLocalDate(previousStartDate));
+  const nextStartMonthKey = toMonthKey(parseLocalDate(nextStartDate));
+
+  return payments
+    .filter((payment) => monthDiff(nextStartMonthKey, payment.monthKey) >= 0)
+    .sort(comparePayments)
+    .map((payment, index) => ({
+      ...payment,
+      id: payment.id || `${previousStartMonthKey}-${index}`,
+    }));
 }
 
 function getLocalToday() {
@@ -826,6 +965,18 @@ function compareIsoDates(a, b) {
   const timeA = sanitizeIsoDateTime(a) ? new Date(a).getTime() : 0;
   const timeB = sanitizeIsoDateTime(b) ? new Date(b).getTime() : 0;
   return timeA - timeB;
+}
+
+function comparePayments(a, b) {
+  if (a.monthKey < b.monthKey) {
+    return -1;
+  }
+
+  if (a.monthKey > b.monthKey) {
+    return 1;
+  }
+
+  return compareIsoDates(a.paidAt, b.paidAt);
 }
 
 function toMonthKey(date) {
@@ -878,6 +1029,22 @@ function formatDateTime(value) {
   }).format(new Date(value));
 }
 
+function formatMonthKey(monthKey) {
+  return new Intl.DateTimeFormat("es-UY", {
+    month: "long",
+    year: "numeric",
+  }).format(buildDateForMonth(monthKey, 1));
+}
+
+function formatMonthKeyShort(monthKey) {
+  return new Intl.DateTimeFormat("es-UY", {
+    month: "short",
+    year: "numeric",
+  })
+    .format(buildDateForMonth(monthKey, 1))
+    .replace(".", "");
+}
+
 function formatCurrency(value, currency) {
   return new Intl.NumberFormat("es-UY", {
     style: "currency",
@@ -900,12 +1067,47 @@ function shiftMonthKeySafe(monthKey, delta) {
   return toMonthKey(new Date(year, month - 1 + delta, 1));
 }
 
-function getNextPaidThroughMonthSafe(account, today) {
+function getPaymentCoverage(account, startMonthKey) {
+  const paymentsByMonth = new Set(account.payments.map((payment) => payment.monthKey));
+  let count = 0;
+
+  while (paymentsByMonth.has(shiftMonthKeySafe(startMonthKey, count))) {
+    count += 1;
+  }
+
+  return {
+    count,
+    paidThroughMonth: count > 0 ? shiftMonthKeySafe(startMonthKey, count - 1) : null,
+  };
+}
+
+function getLastPayment(account) {
+  if (!Array.isArray(account.payments) || account.payments.length === 0) {
+    return null;
+  }
+
+  const sortedPayments = [...account.payments].sort(comparePayments);
+  return sortedPayments[sortedPayments.length - 1] || null;
+}
+
+function buildNextPaymentRecord(account, today, exchangeRate) {
   const startMonthKey = toMonthKey(parseLocalDate(account.startDate));
   const currentMonthKey = toMonthKey(today);
-  const nextMonthKey = account.paidThroughMonth
-    ? shiftMonthKeySafe(account.paidThroughMonth, 1)
-    : startMonthKey;
+  const paymentCoverage = getPaymentCoverage(account, startMonthKey);
+  const nextMonthKey = shiftMonthKeySafe(startMonthKey, paymentCoverage.count);
 
-  return monthDiff(nextMonthKey, currentMonthKey) >= 0 ? nextMonthKey : currentMonthKey;
+  if (nextMonthKey > currentMonthKey) {
+    return null;
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    monthKey: nextMonthKey,
+    paidAt: new Date().toISOString(),
+    amount: account.amount,
+    currency: account.currency,
+    estimatedUyu: account.currency === "USD" ? account.amount * exchangeRate : account.amount,
+    exchangeRateUsed: account.currency === "USD" ? exchangeRate : null,
+    inferred: false,
+  };
 }
