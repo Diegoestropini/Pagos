@@ -16,16 +16,18 @@
     <div class="background-glow background-glow-b"></div>
 
     <main class="app-shell">
-      <section class="hero">
-        <div>
+      <section class="dashboard-header">
+        <div class="dashboard-title">
           <p class="eyebrow">Control mensual con fecha local</p>
-          <h1>Pagos claros, vencimientos visibles y deuda acumulada.</h1>
+          <h1>Control de pagos</h1>
           <p class="hero-copy">
-            Las cuentas quedan guardadas en tu navegador y se recalculan con la
-            fecha local de tu computadora.
+            Vencimientos, deuda acumulada y cotizaci&oacute;n en un solo tablero.
           </p>
         </div>
+      </section>
 
+      <section class="dashboard-overview" aria-label="Resumen de pagos">
+        <div class="stats-grid" id="statsGrid"></div>
         <div class="exchange-card" id="exchangeCard">
           <p class="exchange-label">D&oacute;lar estimado en Uruguay</p>
           <strong id="exchangeRateValue">Cargando...</strong>
@@ -121,8 +123,6 @@
         </aside>
 
         <section class="content-column">
-          <div class="stats-grid" id="statsGrid"></div>
-
           <section class="panel panel-list">
             <div class="panel-header panel-header-row">
               <div>
