@@ -104,7 +104,7 @@ function handleSubmit(event) {
     });
   } else {
     state.accounts.unshift({
-      id: crypto.randomUUID(),
+      id: createId(),
       ...baseAccount,
       payments: [],
       createdAt: new Date().toISOString(),
@@ -879,7 +879,7 @@ function sanitizePayment(value, legacyConfig) {
   }
 
   return {
-    id: id || crypto.randomUUID(),
+    id: id || createId(),
     monthKey,
     paidAt,
     amount,
@@ -909,7 +909,7 @@ function migrateLegacyPayments({ startDate, amount, currency, paidThroughMonth, 
   return Array.from({ length: totalMonths }, (_, index) => {
     const monthKey = shiftMonthKeySafe(startMonthKey, index);
     return {
-      id: crypto.randomUUID(),
+      id: createId(),
       monthKey,
       paidAt: legacyPaidAt,
       amount,
@@ -1067,6 +1067,21 @@ function shiftMonthKeySafe(monthKey, delta) {
   return toMonthKey(new Date(year, month - 1 + delta, 1));
 }
 
+function createId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  const randomPart =
+    typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function"
+      ? Array.from(crypto.getRandomValues(new Uint32Array(2)), (value) =>
+          value.toString(36),
+        ).join("")
+      : Math.random().toString(36).slice(2);
+
+  return `id-${Date.now().toString(36)}-${randomPart}`;
+}
+
 function getPaymentCoverage(account, startMonthKey) {
   const paymentsByMonth = new Set(account.payments.map((payment) => payment.monthKey));
   let count = 0;
@@ -1101,7 +1116,7 @@ function buildNextPaymentRecord(account, today, exchangeRate) {
   }
 
   return {
-    id: crypto.randomUUID(),
+    id: createId(),
     monthKey: nextMonthKey,
     paidAt: new Date().toISOString(),
     amount: account.amount,
