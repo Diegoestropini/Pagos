@@ -502,7 +502,7 @@ function buildAccountDetails(account, today, exchangeRate) {
   const scheduleLabel = `Mensual, vence cada ${account.dueDay} | inicia ${formatDate(
     parseLocalDate(account.startDate),
   )}`;
-  const totalDisplay = isScheduled
+  const totalDisplay = isScheduled || statusKey === "paid"
     ? formatCurrency(account.amount, account.currency)
     : formatCurrency(totalOriginal, account.currency);
   const secondaryAmount = buildSecondaryAmount(
