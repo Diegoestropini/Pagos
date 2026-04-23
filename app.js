@@ -451,7 +451,8 @@ function deleteAccount(accountId) {
 
 function buildAccountDetails(account, today, exchangeRate) {
   const currentMonthKey = toMonthKey(today);
-  const startMonthKey = toMonthKey(parseLocalDate(account.startDate));
+  const startDate = parseLocalDate(account.startDate);
+  const startMonthKey = toMonthKey(startDate);
   const cyclesDue = Math.max(0, monthDiff(startMonthKey, currentMonthKey) + 1);
   const paymentCoverage = getPaymentCoverage(account, startMonthKey);
   const paidCycles = paymentCoverage.count;
@@ -500,7 +501,7 @@ function buildAccountDetails(account, today, exchangeRate) {
   const lastPaymentShortLabel = lastPayment ? formatMonthKeyShort(lastPayment.monthKey) : null;
 
   const scheduleLabel = `Mensual, vence cada ${account.dueDay} | inicia ${formatDate(
-    parseLocalDate(account.startDate),
+    startDate,
   )}`;
   const totalDisplay = isScheduled || statusKey === "paid"
     ? formatCurrency(account.amount, account.currency)
@@ -1106,7 +1107,8 @@ function getLastPayment(account) {
 }
 
 function buildNextPaymentRecord(account, today, exchangeRate) {
-  const startMonthKey = toMonthKey(parseLocalDate(account.startDate));
+  const startDate = parseLocalDate(account.startDate);
+  const startMonthKey = toMonthKey(startDate);
   const currentMonthKey = toMonthKey(today);
   const paymentCoverage = getPaymentCoverage(account, startMonthKey);
   const nextMonthKey = shiftMonthKeySafe(startMonthKey, paymentCoverage.count);
