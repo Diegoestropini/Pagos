@@ -228,7 +228,7 @@ function renderStats(detailsList, today) {
       article.append(label, value);
 
       if (card.small) {
-        const small = document.createElement("p");
+        const small = document.createElement("small");
         small.textContent = card.small;
         article.appendChild(small);
       }
@@ -687,7 +687,12 @@ function loadAccounts() {
 }
 
 function saveAccounts() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.accounts));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.accounts));
+  } catch (error) {
+    console.error("No se pudieron guardar las cuentas.", error);
+    showToast("No se pudieron guardar los cambios localmente.");
+  }
 }
 
 function loadRateCache() {
@@ -700,7 +705,12 @@ function loadRateCache() {
 }
 
 function saveRateCache() {
-  localStorage.setItem(RATE_CACHE_KEY, JSON.stringify(state.exchangeRate));
+  try {
+    localStorage.setItem(RATE_CACHE_KEY, JSON.stringify(state.exchangeRate));
+  } catch (error) {
+    console.error("No se pudo guardar la cotización.", error);
+    showToast("No se pudo guardar la cotización localmente.");
+  }
 }
 
 function persistSanitizedState() {
