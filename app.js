@@ -546,8 +546,9 @@ function buildAccountDetails(account, today, exchangeRate) {
 
 function buildSecondaryAmount(account, exchangeRate, totalEstimatedUyu, isScheduled) {
   if (account.currency === "USD") {
-    const uyuValue = isScheduled ? account.amount * exchangeRate : totalEstimatedUyu;
-    return `${isScheduled ? "Monto mensual estimado" : "Estimado en pesos"}: ${formatCurrency(
+    const hasPendingTotal = !isScheduled && totalEstimatedUyu > 0;
+    const uyuValue = hasPendingTotal ? totalEstimatedUyu : account.amount * exchangeRate;
+    return `${hasPendingTotal ? "Estimado en pesos" : "Monto mensual estimado"}: ${formatCurrency(
       uyuValue,
       "UYU",
     )}`;
