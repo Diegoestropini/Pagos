@@ -15,9 +15,9 @@
   --red-soft: rgba(240, 105, 126, 0.14);
   --green: #4cc38a;
   --green-soft: rgba(76, 195, 138, 0.14);
-  --shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
-  --radius-panel: 18px;
-  --radius-card: 14px;
+  --shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+  --radius-panel: 14px;
+  --radius-card: 10px;
 }
 
 * {
@@ -44,7 +44,7 @@ body {
   height: 22rem;
   border-radius: 50%;
   filter: blur(100px);
-  opacity: 0.14;
+  opacity: 0.1;
   pointer-events: none;
 }
 
@@ -127,9 +127,9 @@ body {
 .exchange-card {
   min-width: 0;
   border-radius: var(--radius-panel);
-  padding: 18px;
+  padding: 16px;
   background:
-    linear-gradient(180deg, rgba(88, 166, 255, 0.08), rgba(255, 255, 255, 0.01)),
+    linear-gradient(180deg, rgba(88, 166, 255, 0.045), rgba(255, 255, 255, 0.008)),
     var(--panel);
 }
 
@@ -138,15 +138,15 @@ body {
 }
 
 .exchange-card strong {
-  font-size: 1.75rem;
+  font-size: 1.45rem;
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .exchange-input-label {
   display: block;
-  margin-top: 16px;
-  margin-bottom: 8px;
+  margin-top: 12px;
+  margin-bottom: 7px;
   color: var(--muted-strong);
   font-size: 0.92rem;
 }
@@ -164,7 +164,7 @@ body {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.035);
   color: var(--text);
-  padding: 14px 16px;
+  padding: 11px 13px;
   outline: none;
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
@@ -176,11 +176,11 @@ body {
 
 .exchange-reset {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .exchange-note {
-  margin-top: 12px;
+  margin-top: 10px;
   font-size: 0.88rem;
 }
 
@@ -192,7 +192,7 @@ body {
 
 .panel {
   border-radius: var(--radius-panel);
-  padding: 20px;
+  padding: 18px;
 }
 
 .panel-form {
@@ -476,7 +476,7 @@ button:disabled {
 
 .stat-card {
   border-radius: var(--radius-card);
-  padding: 16px;
+  padding: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   min-height: 100%;
 }
@@ -596,7 +596,7 @@ button:disabled {
 
 .account-card {
   border-radius: var(--radius-card);
-  padding: 16px;
+  padding: 14px;
   display: grid;
   gap: 12px;
   border-left-width: 4px;
@@ -739,7 +739,7 @@ button:disabled {
   z-index: 20;
   max-width: min(360px, calc(100vw - 32px));
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(7, 16, 27, 0.96);
   border: 1px solid rgba(79, 183, 255, 0.2);
   box-shadow: var(--shadow);
@@ -772,12 +772,23 @@ button:disabled {
 }
 
 @media (max-width: 720px) {
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(88, 166, 255, 0.08), transparent 24rem),
+      linear-gradient(180deg, #0c1118 0%, #080b10 100%);
+  }
+
+  .background-glow {
+    opacity: 0.06;
+    filter: blur(120px);
+  }
+
   .app-shell {
     padding: 22px 14px 36px;
   }
 
   .panel {
-    padding: 20px;
+    padding: 18px;
     border-radius: var(--radius-panel);
   }
 
