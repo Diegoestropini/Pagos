@@ -840,12 +840,21 @@ function sanitizeIsoDateTime(value) {
 }
 
 function sanitizeMonthKey(value, startDate) {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}$/.test(value)) {
+  if (!isValidMonthKey(value)) {
     return null;
   }
 
   const startMonthKey = toMonthKey(parseLocalDate(startDate));
   return monthDiff(startMonthKey, value) >= 0 ? value : null;
+}
+
+function isValidMonthKey(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const [, month] = value.split("-").map(Number);
+  return month >= 1 && month <= 12;
 }
 
 function sanitizePayments(value, legacyConfig) {
