@@ -1070,7 +1070,8 @@ function formatCurrency(value, currency) {
   return new Intl.NumberFormat("es-UY", {
     style: "currency",
     currency,
-    maximumFractionDigits: currency === "UYU" ? 0 : 2,
+    minimumFractionDigits: currency === "UYU" && Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
