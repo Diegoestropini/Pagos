@@ -90,6 +90,15 @@ function handleSubmit(event) {
   };
 
   if (accountId) {
+    const existingAccount = state.accounts.find((account) => account.id === accountId);
+
+    if (!existingAccount) {
+      resetForm();
+      render();
+      showToast("La cuenta que estabas editando ya no existe.");
+      return;
+    }
+
     state.accounts = state.accounts.map((account) => {
       if (account.id !== accountId) {
         return account;
@@ -826,8 +835,32 @@ function normalizeCurrency(value) {
 }
 
 function normalizePositiveAmount(value) {
-  const amount = Number(value);
+  const normalizedValue =
+    typeof value === "string" ? normalizeLocalizedNumber(value) : value;
+  const amount = Number(normalizedValue);
   return Number.isFinite(amount) ? Math.round(amount * 100) / 100 : Number.NaN;
+}
+
+function normalizeLocalizedNumber(value) {
+  const compactValue = value.trim().replace(/\s+/g, "");
+
+  if (!compactValue) {
+    return Number.NaN;
+  }
+
+  const lastCommaIndex = compactValue.lastIndexOf(",");
+  const lastDotIndex = compactValue.lastIndexOf(".");
+
+  if (lastCommaIndex === -1 && lastDotIndex === -1) {
+    return compactValue;
+  }
+
+  const decimalSeparator = lastCommaIndex > lastDotIndex ? "," : ".";
+  const thousandsSeparator = decimalSeparator === "," ? "." : ",";
+
+  return compactValue
+    .replace(new RegExp(`\\${thousandsSeparator}`, "g"), "")
+    .replace(decimalSeparator, ".");
 }
 
 function sanitizeIsoDateTime(value) {
