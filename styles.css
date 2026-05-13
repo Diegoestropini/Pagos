@@ -1,23 +1,23 @@
 :root {
-  --bg: #0b0f14;
-  --bg-soft: #111821;
-  --panel: #121a24;
-  --panel-raised: #162130;
-  --panel-border: rgba(216, 230, 245, 0.1);
+  --bg: #0d1014;
+  --bg-soft: #14191f;
+  --panel: #151a20;
+  --panel-raised: #1a2128;
+  --panel-border: rgba(226, 234, 241, 0.1);
   --text: #f4f7fb;
   --muted: #91a0af;
   --muted-strong: #c9d6e2;
-  --blue: #58a6ff;
-  --blue-soft: rgba(88, 166, 255, 0.15);
-  --orange: #f2ad4e;
-  --orange-soft: rgba(242, 173, 78, 0.15);
-  --red: #f0697e;
-  --red-soft: rgba(240, 105, 126, 0.14);
-  --green: #4cc38a;
-  --green-soft: rgba(76, 195, 138, 0.14);
-  --shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
-  --radius-panel: 14px;
-  --radius-card: 10px;
+  --blue: #64b5f6;
+  --blue-soft: rgba(100, 181, 246, 0.14);
+  --orange: #f5b85b;
+  --orange-soft: rgba(245, 184, 91, 0.14);
+  --red: #f16d80;
+  --red-soft: rgba(241, 109, 128, 0.13);
+  --green: #55c991;
+  --green-soft: rgba(85, 201, 145, 0.13);
+  --shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+  --radius-panel: 10px;
+  --radius-card: 8px;
 }
 
 * {
@@ -29,11 +29,11 @@ body {
   min-height: 100vh;
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    radial-gradient(circle at top left, rgba(88, 166, 255, 0.14), transparent 31rem),
-    linear-gradient(180deg, #0c1118 0%, #080b10 100%);
-  background-size: 42px 42px, 42px 42px, auto, auto;
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    radial-gradient(circle at top left, rgba(100, 181, 246, 0.1), transparent 30rem),
+    linear-gradient(180deg, #10141a 0%, #090c10 100%);
+  background-size: 46px 46px, 46px 46px, auto, auto;
   color: var(--text);
 }
 
@@ -44,7 +44,7 @@ body {
   height: 22rem;
   border-radius: 50%;
   filter: blur(100px);
-  opacity: 0.1;
+  opacity: 0.075;
   pointer-events: none;
 }
 
@@ -65,7 +65,7 @@ body {
   z-index: 1;
   max-width: 1240px;
   margin: 0 auto;
-  padding: 28px 20px 36px;
+  padding: 30px 20px 40px;
 }
 
 .dashboard-header {
@@ -73,11 +73,11 @@ body {
   justify-content: space-between;
   gap: 24px;
   align-items: end;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .dashboard-title h1 {
-  margin: 4px 0 7px;
+  margin: 5px 0 8px;
   font-size: clamp(1.85rem, 2.7vw, 2.65rem);
   line-height: 1.05;
   letter-spacing: 0;
@@ -90,7 +90,7 @@ body {
 
 .eyebrow {
   margin: 0;
-  color: #8cc7ff;
+  color: #9cd3ff;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.72rem;
@@ -118,7 +118,7 @@ body {
 
 .dashboard-overview {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 290px;
   gap: 14px;
   align-items: start;
   margin-bottom: 24px;
@@ -127,9 +127,9 @@ body {
 .exchange-card {
   min-width: 0;
   border-radius: var(--radius-panel);
-  padding: 16px;
+  padding: 14px;
   background:
-    linear-gradient(180deg, rgba(88, 166, 255, 0.045), rgba(255, 255, 255, 0.008)),
+    linear-gradient(180deg, rgba(100, 181, 246, 0.035), rgba(255, 255, 255, 0.008)),
     var(--panel);
 }
 
@@ -138,7 +138,7 @@ body {
 }
 
 .exchange-card strong {
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   display: block;
   margin-bottom: 6px;
 }
@@ -148,7 +148,8 @@ body {
   margin-top: 12px;
   margin-bottom: 7px;
   color: var(--muted-strong);
-  font-size: 0.92rem;
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .exchange-actions {
@@ -161,7 +162,7 @@ body {
 .exchange-actions input {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.035);
   color: var(--text);
   padding: 11px 13px;
@@ -181,18 +182,18 @@ body {
 
 .exchange-note {
   margin-top: 10px;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
 }
 
 .layout-grid {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-columns: 310px minmax(0, 1fr);
   gap: 18px;
 }
 
 .panel {
   border-radius: var(--radius-panel);
-  padding: 18px;
+  padding: 17px;
 }
 
 .panel-form {
@@ -254,7 +255,7 @@ button {
 .account-form select {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.035);
   color: var(--text);
   padding: 12px 13px;
@@ -336,7 +337,7 @@ button:focus-visible,
 .ghost-button,
 .danger-button,
 .filter-button {
-  border-radius: 10px;
+  border-radius: var(--radius-card);
   padding: 11px 14px;
   font-weight: 600;
 }
@@ -346,7 +347,7 @@ button:focus-visible,
 }
 
 .primary-button {
-  background: linear-gradient(135deg, #4098f7, #2468d8);
+  background: linear-gradient(135deg, #4fa6f6, #286fd8);
   color: white;
   box-shadow: 0 10px 20px rgba(36, 104, 216, 0.2);
 }
@@ -416,9 +417,9 @@ button:focus-visible,
 }
 
 .danger-button {
-  background: rgba(240, 105, 126, 0.1);
-  border: 1px solid rgba(240, 105, 126, 0.16);
-  color: #ff9cab;
+  background: rgba(241, 109, 128, 0.075);
+  border: 1px solid rgba(241, 109, 128, 0.13);
+  color: #f7a1ad;
 }
 
 button:disabled {
@@ -475,21 +476,61 @@ button:disabled {
 }
 
 .stat-card {
+  position: relative;
+  min-height: 132px;
   border-radius: var(--radius-card);
-  padding: 14px;
+  padding: 15px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.stat-card::after {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.stat-card-upcoming::after {
+  content: "$";
+  color: #b7e6ff;
+}
+
+.stat-card-neutral::after {
+  content: "\2192";
+  color: #d2dde8;
+}
+
+.stat-card-today::after {
+  content: "7";
+  color: #ffd79d;
+}
+
+.stat-card-overdue::after {
+  content: "!";
+  color: #ffb1bc;
 }
 
 .stat-card p {
-  margin: 0 0 8px;
+  max-width: calc(100% - 42px);
+  margin: 0 0 12px;
   color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 650;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .stat-card strong {
   display: block;
-  font-size: clamp(1.45rem, 2.3vw, 1.8rem);
+  font-size: clamp(1.55rem, 2.5vw, 1.9rem);
   line-height: 1.1;
 }
 
@@ -542,19 +583,20 @@ button:disabled {
 .filter-bar {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
+  gap: 3px;
   margin-top: 18px;
-  padding: 4px;
-  border-radius: 12px;
+  padding: 3px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.055);
 }
 
 .filter-button {
-  padding: 9px 10px;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  padding: 8px 9px;
+  border-radius: 7px;
+  font-size: 0.86rem;
   white-space: nowrap;
+  border-color: transparent;
 }
 
 .filter-button.is-active {
@@ -565,12 +607,12 @@ button:disabled {
 
 .account-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin-top: 18px;
 }
 
 .empty-state {
-  padding: 34px 22px;
+  padding: 32px 22px;
   text-align: center;
   border: 1px dashed rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-card);
@@ -581,13 +623,13 @@ button:disabled {
 }
 
 .empty-state::before {
-  content: "+";
+  content: "$";
   display: grid;
   place-items: center;
   width: 42px;
   height: 42px;
   margin: 0 auto 12px;
-  border-radius: 50%;
+  border-radius: var(--radius-card);
   background: rgba(88, 166, 255, 0.12);
   color: #9fd0ff;
   font-size: 1.35rem;
@@ -595,10 +637,11 @@ button:disabled {
 
 .account-card {
   border-radius: var(--radius-card);
-  padding: 14px;
+  padding: 15px;
   display: grid;
-  gap: 12px;
-  border-left-width: 4px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
+  gap: 13px 16px;
+  border-left-width: 3px;
   transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
@@ -643,11 +686,12 @@ button:disabled {
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
+  grid-column: 1 / -1;
 }
 
 .account-name {
   margin: 0;
-  font-size: 1.08rem;
+  font-size: 1.06rem;
   font-weight: 750;
 }
 
@@ -657,9 +701,10 @@ button:disabled {
 }
 
 .status-pill {
+  justify-self: start;
   white-space: nowrap;
-  border-radius: 999px;
-  padding: 6px 9px;
+  border-radius: 7px;
+  padding: 5px 8px;
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -690,14 +735,15 @@ button:disabled {
 .amount-block {
   display: grid;
   gap: 4px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  align-content: center;
+  padding: 12px;
+  border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.045);
 }
 
 .primary-amount {
-  font-size: 1.55rem;
+  font-size: 1.6rem;
   line-height: 1.1;
 }
 
@@ -708,6 +754,7 @@ button:disabled {
 .account-meta {
   font-size: 0.91rem;
   line-height: 1.45;
+  align-self: center;
 }
 
 .account-meta p {
@@ -720,15 +767,21 @@ button:disabled {
 
 .account-actions {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(180px, 1.25fr) repeat(3, minmax(120px, 0.75fr));
   gap: 8px;
 }
 
 .account-actions button {
   min-width: 0;
-  padding: 9px 10px;
-  font-size: 0.88rem;
+  padding: 8px 10px;
+  font-size: 0.84rem;
   white-space: normal;
+}
+
+.account-actions .danger-button {
+  justify-self: end;
+  min-width: 108px;
 }
 
 .toast {
@@ -768,6 +821,18 @@ button:disabled {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .account-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-actions .danger-button {
+    justify-self: stretch;
+  }
 }
 
 @media (max-width: 720px) {
@@ -804,12 +869,13 @@ button:disabled {
 
   .stat-card {
     padding: 13px;
+    min-height: 126px;
   }
 
   .stat-card p {
     min-height: 2.3em;
     margin-bottom: 6px;
-    font-size: 0.8rem;
+    font-size: 0.76rem;
   }
 
   .stat-card strong {
@@ -851,6 +917,14 @@ button:disabled {
 }
 
 @media (max-width: 430px) {
+  .account-card {
+    padding: 14px;
+  }
+
+  .account-card-top {
+    gap: 8px;
+  }
+
   .account-actions {
     grid-template-columns: 1fr;
   }
