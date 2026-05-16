@@ -385,19 +385,36 @@ function resetForm() {
 
 function markAsPaid(accountId) {
   const today = getLocalToday();
+  const account = state.accounts.find((item) => item.id === accountId);
+
+  if (!account) {
+    return;
+  }
+
+  const details = buildAccountDetails(account, today, state.exchangeRate.rate);
+  if (details.statusKey === "scheduled") {
+    return;
+  }
+
+  const nextPayment = buildNextPaymentRecord(account, today, state.exchangeRate.rate);
+  if (!nextPayment) {
+    return;
+  }
+
+  const paymentMonth = formatMonthKey(nextPayment.monthKey);
+  const confirmed = window.confirm(
+    `Seguro que deseas registrar el pago de "${account.name}" para ${paymentMonth} por ${formatCurrency(
+      nextPayment.amount,
+      nextPayment.currency,
+    )}?`,
+  );
+
+  if (!confirmed) {
+    return;
+  }
 
   state.accounts = state.accounts.map((account) => {
     if (account.id !== accountId) {
-      return account;
-    }
-
-    const details = buildAccountDetails(account, today, state.exchangeRate.rate);
-    if (details.statusKey === "scheduled") {
-      return account;
-    }
-
-    const nextPayment = buildNextPaymentRecord(account, today, state.exchangeRate.rate);
-    if (!nextPayment) {
       return account;
     }
 
