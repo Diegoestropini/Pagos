@@ -196,7 +196,7 @@ function renderStats(detailsList, today) {
   const cards = [
     {
       tone: "upcoming",
-      label: "Exigibles este mes",
+      label: "Pendientes del mes",
       value: String(actionableDetails.length),
       small: `Pendiente: ${formatCurrency(actionableTotalUyu, "UYU")}`,
     },
@@ -249,7 +249,7 @@ function renderStats(detailsList, today) {
   summaryText.textContent =
     detailsList.length === 0
       ? "Todavía no hay pagos cargados."
-      : `${actionableDetails.length} exigible${
+      : `${actionableDetails.length} pendiente${
           actionableDetails.length === 1 ? "" : "s"
         } este mes, ${scheduledDetails.length} programada${
           scheduledDetails.length === 1 ? "" : "s"
@@ -313,7 +313,10 @@ function renderAccounts(detailsList) {
     if (details.statusKey === "scheduled") {
       markPaidButton.textContent = "Aún no corresponde";
     } else if (details.nextPaymentShortLabel) {
-      markPaidButton.textContent = `Pagar ${details.nextPaymentShortLabel}`;
+      markPaidButton.textContent =
+        details.daysUntilDue > 0
+          ? `Pagar anticipado ${details.nextPaymentShortLabel}`
+          : `Pagar ${details.nextPaymentShortLabel}`;
     } else {
       markPaidButton.textContent = "Marcar pago del mes";
     }
@@ -621,6 +624,10 @@ function buildMetaLines(
       `El vencimiento fue hace ${Math.abs(daysUntilDue)} día${
         Math.abs(daysUntilDue) === 1 ? "" : "s"
       }.`,
+    );
+  } else if (daysUntilDue > 0) {
+    metaLines.push(
+      `Vence el ${formatDate(currentDueDate)}. Puedes registrarlo ahora como pago anticipado si ya lo pagaste.`,
     );
   } else {
     metaLines.push(`Próximo vencimiento: ${formatDate(currentDueDate)}.`);
