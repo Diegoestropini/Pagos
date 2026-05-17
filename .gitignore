@@ -1,0 +1,4 @@
+node_modules/
+output/
+debug.log
+.playwright-mcp/
