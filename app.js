@@ -185,7 +185,7 @@ function renderStats(detailsList, today) {
     0,
   );
   const overdueTotalUyu = overdueEntries.reduce(
-    (total, item) => total + item.totalEstimatedUyu,
+    (total, item) => total + item.overdueEstimatedUyu,
     0,
   );
   const scheduledMonthlyUyu = scheduledDetails.reduce(
@@ -314,7 +314,7 @@ function renderAccounts(detailsList) {
       markPaidButton.textContent = "Aún no corresponde";
     } else if (details.nextPaymentShortLabel) {
       markPaidButton.textContent =
-        details.daysUntilDue > 0
+        details.isNextPaymentEarly
           ? `Pagar anticipado ${details.nextPaymentShortLabel}`
           : `Pagar ${details.nextPaymentShortLabel}`;
     } else {
@@ -482,16 +482,18 @@ function buildAccountDetails(account, today, exchangeRate) {
   const currentMonthKey = toMonthKey(today);
   const startDate = parseLocalDate(account.startDate);
   const startMonthKey = toMonthKey(startDate);
-  const cyclesDue = Math.max(0, monthDiff(startMonthKey, currentMonthKey) + 1);
+  const payableCycles = Math.max(0, monthDiff(startMonthKey, currentMonthKey) + 1);
   const paymentCoverage = getPaymentCoverage(account, startMonthKey);
   const paidCycles = paymentCoverage.count;
-  const pendingInstallments = Math.max(0, cyclesDue - paidCycles);
+  const pendingInstallments = Math.max(0, payableCycles - paidCycles);
   const currentDueDate =
-    cyclesDue > 0
+    payableCycles > 0
       ? buildDateForMonth(currentMonthKey, account.dueDay)
       : buildDateForMonth(startMonthKey, account.dueDay);
   const daysUntilDue = differenceInDays(today, currentDueDate);
-  const isScheduled = cyclesDue === 0;
+  const isScheduled = payableCycles === 0;
+  const dueCycles = isScheduled ? 0 : payableCycles - (daysUntilDue > 0 ? 1 : 0);
+  const overdueInstallments = Math.max(0, dueCycles - paidCycles);
 
   let statusKey = "upcoming";
   let statusLabel = "Por pagar";
@@ -502,9 +504,9 @@ function buildAccountDetails(account, today, exchangeRate) {
   } else if (pendingInstallments <= 0) {
     statusKey = "paid";
     statusLabel = "Pagada";
-  } else if (pendingInstallments > 1 || daysUntilDue < 0) {
+  } else if (overdueInstallments > 0) {
     statusKey = "overdue";
-    statusLabel = pendingInstallments > 1 ? "Deuda acumulada" : "Vencida";
+    statusLabel = overdueInstallments > 1 ? "Deuda acumulada" : "Vencida";
   } else if (daysUntilDue === 0) {
     statusKey = "today";
     statusLabel = "Vence hoy";
@@ -514,12 +516,21 @@ function buildAccountDetails(account, today, exchangeRate) {
   }
 
   const totalOriginal = account.amount * pendingInstallments;
+  const overdueOriginal = account.amount * overdueInstallments;
   const totalEstimatedUyu =
     account.currency === "USD" ? totalOriginal * exchangeRate : totalOriginal;
+  const overdueEstimatedUyu =
+    account.currency === "USD" ? overdueOriginal * exchangeRate : overdueOriginal;
   const monthlyEstimatedUyu =
     account.currency === "USD" ? account.amount * exchangeRate : account.amount;
   const nextPaymentMonthKey =
     pendingInstallments > 0 ? shiftMonthKeySafe(startMonthKey, paidCycles) : null;
+  const nextPaymentDueDate = nextPaymentMonthKey
+    ? buildDateForMonth(nextPaymentMonthKey, account.dueDay)
+    : null;
+  const isNextPaymentEarly = nextPaymentDueDate
+    ? differenceInDays(today, nextPaymentDueDate) > 0
+    : false;
   const nextPaymentLabel = nextPaymentMonthKey ? formatMonthKey(nextPaymentMonthKey) : null;
   const nextPaymentShortLabel = nextPaymentMonthKey
     ? formatMonthKeyShort(nextPaymentMonthKey)
@@ -543,12 +554,15 @@ function buildAccountDetails(account, today, exchangeRate) {
   );
   const metaLines = buildMetaLines(
     account,
+    today,
     statusKey,
     pendingInstallments,
+    overdueInstallments,
     currentDueDate,
     daysUntilDue,
     exchangeRate,
     nextPaymentLabel,
+    nextPaymentDueDate,
     remainingAfterNext,
     lastPayment,
     lastPaymentLabel,
@@ -559,7 +573,9 @@ function buildAccountDetails(account, today, exchangeRate) {
     statusKey,
     statusLabel,
     pendingInstallments,
+    overdueInstallments,
     totalEstimatedUyu,
+    overdueEstimatedUyu,
     monthlyEstimatedUyu,
     totalDisplay,
     secondaryAmount,
@@ -568,6 +584,7 @@ function buildAccountDetails(account, today, exchangeRate) {
     daysUntilDue,
     currentDueDate,
     nextPaymentShortLabel,
+    isNextPaymentEarly,
     lastPayment,
     lastPaymentShortLabel,
   };
@@ -590,12 +607,15 @@ function buildSecondaryAmount(account, exchangeRate, totalEstimatedUyu, isSchedu
 
 function buildMetaLines(
   account,
+  today,
   statusKey,
   pendingInstallments,
+  overdueInstallments,
   currentDueDate,
   daysUntilDue,
   exchangeRate,
   nextPaymentLabel,
+  nextPaymentDueDate,
   remainingAfterNext,
   lastPayment,
   lastPaymentLabel,
@@ -604,10 +624,18 @@ function buildMetaLines(
 
   if (statusKey === "scheduled") {
     metaLines.push(`Esta cuenta empieza a correr el ${formatDate(currentDueDate)}.`);
-  } else if (pendingInstallments > 1) {
+  } else if (overdueInstallments > 1) {
     metaLines.push(
-      `Tienes ${pendingInstallments} meses acumulados. La deuda ya incluye varios ciclos impagos.`,
+      `Tienes ${overdueInstallments} meses vencidos acumulados. La deuda ya incluye varios ciclos impagos.`,
     );
+    if (pendingInstallments > overdueInstallments) {
+      const notDueInstallments = pendingInstallments - overdueInstallments;
+      metaLines.push(
+        `Además hay ${notDueInstallments} pago${
+          notDueInstallments === 1 ? "" : "s"
+        } pendiente${notDueInstallments === 1 ? "" : "s"} sin vencer.`,
+      );
+    }
     metaLines.push(
       `Si registras un pago ahora, cancelas ${nextPaymentLabel} y quedarán ${remainingAfterNext} pendientes.`,
     );
@@ -619,11 +647,12 @@ function buildMetaLines(
     metaLines.push(
       `Faltan ${daysUntilDue} día${daysUntilDue === 1 ? "" : "s"} para el vencimiento.`,
     );
-  } else if (statusKey === "overdue" && pendingInstallments === 1) {
+  } else if (statusKey === "overdue" && overdueInstallments === 1) {
+    const overdueDays = nextPaymentDueDate
+      ? Math.abs(differenceInDays(today, nextPaymentDueDate))
+      : Math.abs(daysUntilDue);
     metaLines.push(
-      `El vencimiento fue hace ${Math.abs(daysUntilDue)} día${
-        Math.abs(daysUntilDue) === 1 ? "" : "s"
-      }.`,
+      `El vencimiento fue hace ${overdueDays} día${overdueDays === 1 ? "" : "s"}.`,
     );
   } else if (daysUntilDue > 0) {
     metaLines.push(
