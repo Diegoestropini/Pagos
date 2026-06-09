@@ -5,7 +5,7 @@
   --panel-raised: #1a2128;
   --panel-border: rgba(226, 234, 241, 0.11);
   --text: #f4f7fb;
-  --muted: #91a0af;
+  --muted: #a6b3c0;
   --muted-strong: #c9d6e2;
   --blue: #64b5f6;
   --blue-soft: rgba(100, 181, 246, 0.14);
@@ -15,8 +15,8 @@
   --red-soft: rgba(241, 109, 128, 0.13);
   --green: #55c991;
   --green-soft: rgba(85, 201, 145, 0.13);
-  --shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
-  --shadow-soft: 0 10px 22px rgba(0, 0, 0, 0.14);
+  --shadow: 0 16px 34px rgba(0, 0, 0, 0.16);
+  --shadow-soft: 0 10px 20px rgba(0, 0, 0, 0.12);
   --radius-panel: 10px;
   --radius-card: 8px;
 }
@@ -32,9 +32,9 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    radial-gradient(circle at top left, rgba(100, 181, 246, 0.1), transparent 30rem),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    radial-gradient(circle at top left, rgba(100, 181, 246, 0.075), transparent 30rem),
     linear-gradient(180deg, #10141a 0%, #090c10 100%);
   background-size: 46px 46px, 46px 46px, auto, auto;
   color: var(--text);
@@ -47,7 +47,7 @@ body {
   height: 22rem;
   border-radius: 50%;
   filter: blur(100px);
-  opacity: 0.075;
+  opacity: 0.055;
   pointer-events: none;
 }
 
@@ -68,7 +68,7 @@ body {
   z-index: 1;
   max-width: 1240px;
   margin: 0 auto;
-  padding: 28px 20px 40px;
+  padding: 32px 20px 44px;
 }
 
 .dashboard-header {
@@ -76,7 +76,7 @@ body {
   justify-content: space-between;
   gap: 24px;
   align-items: end;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .dashboard-title h1 {
@@ -121,16 +121,17 @@ body {
 
 .dashboard-overview {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 290px;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 304px;
+  gap: 16px;
   align-items: start;
-  margin-bottom: 18px;
+  margin-bottom: 28px;
 }
 
 .exchange-card {
   min-width: 0;
+  min-height: 136px;
   border-radius: var(--radius-panel);
-  padding: 13px 14px;
+  padding: 15px;
   background:
     linear-gradient(180deg, rgba(100, 181, 246, 0.05), rgba(255, 255, 255, 0.012)),
     var(--panel);
@@ -138,13 +139,15 @@ body {
 }
 
 .exchange-label {
-  margin: 0 0 7px;
+  margin: 0 0 6px;
+  font-size: 0.88rem;
 }
 
 .exchange-card strong {
-  font-size: 1.3rem;
+  font-size: 1.36rem;
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+  letter-spacing: 0;
 }
 
 #exchangeRateMeta {
@@ -174,7 +177,7 @@ body {
   border-radius: var(--radius-card);
   background: rgba(255, 255, 255, 0.035);
   color: var(--text);
-  padding: 9px 12px;
+  padding: 10px 12px;
   outline: none;
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
@@ -187,7 +190,7 @@ body {
 .exchange-reset {
   width: 100%;
   margin-top: 7px;
-  padding-block: 9px;
+  padding-block: 10px;
 }
 
 .exchange-note {
@@ -199,20 +202,23 @@ body {
 .layout-grid {
   display: grid;
   grid-template-columns: 310px minmax(0, 1fr);
-  gap: 18px;
+  gap: 20px;
   align-items: start;
 }
 
 .panel {
   border-radius: var(--radius-panel);
-  padding: 18px;
+  padding: 19px;
 }
 
 .panel-form {
   align-self: start;
   position: sticky;
   top: 18px;
-  box-shadow: var(--shadow-soft);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.01)),
+    var(--panel);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
 }
 
 .panel-header h2 {
@@ -353,6 +359,10 @@ button:focus-visible,
   border-radius: var(--radius-card);
   padding: 10px 14px;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 .is-hidden {
@@ -375,22 +385,30 @@ button:focus-visible,
 .success-button::before,
 .mark-paid-button::before {
   content: "\2713";
-  margin-right: 8px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1em;
 }
 
 .edit-button::before {
   content: "\270e";
-  margin-right: 8px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1em;
 }
 
 .undo-paid-button::before {
   content: "\21b6";
-  margin-right: 8px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1em;
 }
 
 .delete-button::before {
   content: "\00d7";
-  margin-right: 8px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1em;
   font-size: 1.08em;
   line-height: 0;
 }
@@ -484,7 +502,7 @@ button:disabled {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.08fr) repeat(2, minmax(0, 1fr)) minmax(0, 1.08fr);
   gap: 14px;
 }
 
@@ -492,10 +510,16 @@ button:disabled {
   position: relative;
   min-height: 136px;
   border-radius: var(--radius-card);
-  padding: 16px;
+  padding: 17px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
   box-shadow: var(--shadow-soft);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(216, 230, 245, 0.18);
 }
 
 .stat-card::after {
@@ -557,8 +581,9 @@ button:disabled {
 
 .stat-card-neutral {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.008)),
     var(--panel);
+  opacity: 0.88;
 }
 
 .stat-card-today {
@@ -570,16 +595,16 @@ button:disabled {
 
 .stat-card-upcoming {
   background:
-    linear-gradient(180deg, rgba(79, 183, 255, 0.16), rgba(79, 183, 255, 0.03)),
+    linear-gradient(180deg, rgba(79, 183, 255, 0.2), rgba(79, 183, 255, 0.035)),
     var(--panel);
-  border-color: rgba(79, 183, 255, 0.18);
+  border-color: rgba(79, 183, 255, 0.26);
 }
 
 .stat-card-overdue {
   background:
-    linear-gradient(180deg, rgba(255, 92, 114, 0.18), rgba(255, 92, 114, 0.04)),
+    linear-gradient(180deg, rgba(255, 92, 114, 0.22), rgba(255, 92, 114, 0.045)),
     var(--panel);
-  border-color: rgba(255, 92, 114, 0.2);
+  border-color: rgba(255, 92, 114, 0.28);
 }
 
 .stat-card-today strong {
@@ -597,11 +622,11 @@ button:disabled {
 .filter-bar {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 4px;
-  margin-top: 16px;
-  padding: 4px;
+  gap: 5px;
+  margin-top: 17px;
+  padding: 5px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.055);
 }
 
@@ -611,6 +636,12 @@ button:disabled {
   font-size: 0.86rem;
   white-space: nowrap;
   border-color: transparent;
+  box-shadow: none;
+}
+
+.filter-button:hover {
+  background: rgba(255, 255, 255, 0.065);
+  transform: none;
 }
 
 .filter-button.is-active {
@@ -622,12 +653,13 @@ button:disabled {
 
 .account-list {
   display: grid;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 13px;
+  margin-top: 17px;
 }
 
 .empty-state {
-  padding: 32px 22px;
+  position: relative;
+  padding: 34px 24px;
   text-align: center;
   border: 1px dashed rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-card);
@@ -635,24 +667,35 @@ button:disabled {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)),
     rgba(255, 255, 255, 0.015);
+  overflow: hidden;
+}
+
+.empty-state::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(159, 208, 255, 0.05);
+  pointer-events: none;
 }
 
 .empty-state::before {
   content: "$";
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   margin: 0 auto 12px;
   border-radius: var(--radius-card);
-  background: rgba(88, 166, 255, 0.12);
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.2), rgba(85, 201, 145, 0.12));
+  border: 1px solid rgba(159, 208, 255, 0.11);
   color: #9fd0ff;
   font-size: 1.35rem;
 }
 
 .account-card {
   border-radius: var(--radius-card);
-  padding: 16px;
+  padding: 17px;
   display: grid;
   grid-template-columns: minmax(230px, 0.52fr) minmax(0, 1fr);
   gap: 12px 16px;
@@ -662,7 +705,7 @@ button:disabled {
 }
 
 .account-card:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   border-color: rgba(216, 230, 245, 0.18);
   background-color: var(--panel-raised);
 }
@@ -707,7 +750,7 @@ button:disabled {
 
 .account-name {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.08rem;
   font-weight: 750;
 }
 
@@ -724,6 +767,7 @@ button:disabled {
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .status-upcoming .status-pill,
@@ -753,15 +797,16 @@ button:disabled {
   gap: 4px;
   align-content: center;
   min-height: 106px;
-  padding: 14px;
+  padding: 15px;
   border-radius: var(--radius-card);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .primary-amount {
-  font-size: clamp(1.45rem, 2vw, 1.72rem);
+  font-size: clamp(1.48rem, 2vw, 1.78rem);
   line-height: 1.1;
+  letter-spacing: 0;
 }
 
 .secondary-amount {
@@ -786,9 +831,9 @@ button:disabled {
 .account-actions {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: minmax(190px, 1.35fr) repeat(2, minmax(126px, 0.7fr)) minmax(108px, 0.5fr);
+  grid-template-columns: minmax(170px, 1.35fr) repeat(2, minmax(112px, 0.7fr)) minmax(98px, 0.5fr);
   gap: 8px;
-  padding-top: 2px;
+  padding-top: 4px;
 }
 
 .account-actions button {
@@ -796,11 +841,12 @@ button:disabled {
   padding: 9px 11px;
   font-size: 0.84rem;
   white-space: normal;
+  line-height: 1.2;
 }
 
 .account-actions .danger-button {
   justify-self: end;
-  min-width: 108px;
+  min-width: 98px;
 }
 
 .toast {
@@ -872,7 +918,7 @@ button:disabled {
   }
 
   .app-shell {
-    padding: 22px 14px 36px;
+    padding: 22px 14px 38px;
   }
 
   .dashboard-header {
@@ -880,7 +926,7 @@ button:disabled {
   }
 
   .dashboard-overview {
-    margin-bottom: 14px;
+    margin-bottom: 18px;
   }
 
   .panel {
@@ -944,6 +990,14 @@ button:disabled {
     width: 100%;
   }
 
+  .primary-button,
+  .success-button,
+  .ghost-button,
+  .danger-button,
+  .filter-button {
+    gap: 6px;
+  }
+
   .toast {
     right: 14px;
     left: 14px;
@@ -959,6 +1013,11 @@ button:disabled {
 
   .account-card-top {
     gap: 8px;
+  }
+
+  .status-pill {
+    white-space: normal;
+    text-align: right;
   }
 
   .account-actions {

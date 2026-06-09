@@ -311,14 +311,14 @@ function renderAccounts(detailsList) {
       details.statusKey === "paid" || details.statusKey === "scheduled";
 
     if (details.statusKey === "scheduled") {
-      markPaidButton.textContent = "Aún no corresponde";
+      markPaidButton.textContent = "No corresponde";
     } else if (details.nextPaymentShortLabel) {
       markPaidButton.textContent =
         details.isNextPaymentEarly
-          ? `Pagar anticipado ${details.nextPaymentShortLabel}`
+          ? `Anticipar ${details.nextPaymentShortLabel}`
           : `Pagar ${details.nextPaymentShortLabel}`;
     } else {
-      markPaidButton.textContent = "Marcar pago del mes";
+      markPaidButton.textContent = "Pagar mes";
     }
 
     markPaidButton.addEventListener("click", () => markAsPaid(details.account.id));
@@ -326,7 +326,7 @@ function renderAccounts(detailsList) {
     undoPaidButton.disabled = !details.lastPayment;
     undoPaidButton.textContent = details.lastPayment
       ? `Deshacer ${details.lastPaymentShortLabel}`
-      : "Sin pagos registrados";
+      : "Sin pagos";
     undoPaidButton.addEventListener("click", () => undoLastPayment(details.account.id));
 
     node
