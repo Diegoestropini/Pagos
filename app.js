@@ -483,8 +483,8 @@ function buildAccountDetails(account, today, exchangeRate) {
   const startDate = parseLocalDate(account.startDate);
   const startMonthKey = toMonthKey(startDate);
   const payableCycles = Math.max(0, monthDiff(startMonthKey, currentMonthKey) + 1);
-  const paymentCoverage = getPaymentCoverage(account, startMonthKey);
-  const paidCycles = paymentCoverage.count;
+  const paymentCoverage = getPaymentCoverage(account, startMonthKey, currentMonthKey);
+  const paidCycles = paymentCoverage.paidCycles;
   const pendingInstallments = Math.max(0, payableCycles - paidCycles);
   const currentDueDate =
     payableCycles > 0
@@ -493,7 +493,11 @@ function buildAccountDetails(account, today, exchangeRate) {
   const daysUntilDue = differenceInDays(today, currentDueDate);
   const isScheduled = payableCycles === 0;
   const dueCycles = isScheduled ? 0 : payableCycles - (daysUntilDue > 0 ? 1 : 0);
-  const overdueInstallments = Math.max(0, dueCycles - paidCycles);
+  const dueCoverage =
+    dueCycles > 0
+      ? getPaymentCoverage(account, startMonthKey, shiftMonthKeySafe(startMonthKey, dueCycles - 1))
+      : null;
+  const overdueInstallments = Math.max(0, dueCycles - (dueCoverage?.paidCycles || 0));
 
   let statusKey = "upcoming";
   let statusLabel = "Por pagar";
@@ -524,7 +528,7 @@ function buildAccountDetails(account, today, exchangeRate) {
   const monthlyEstimatedUyu =
     account.currency === "USD" ? account.amount * exchangeRate : account.amount;
   const nextPaymentMonthKey =
-    pendingInstallments > 0 ? shiftMonthKeySafe(startMonthKey, paidCycles) : null;
+    pendingInstallments > 0 ? paymentCoverage.firstUnpaidMonthKey : null;
   const nextPaymentDueDate = nextPaymentMonthKey
     ? buildDateForMonth(nextPaymentMonthKey, account.dueDay)
     : null;
@@ -1190,7 +1194,7 @@ function createId() {
   return `id-${Date.now().toString(36)}-${randomPart}`;
 }
 
-function getPaymentCoverage(account, startMonthKey) {
+function getPaymentCoverage(account, startMonthKey, endMonthKey = null) {
   const paymentsByMonth = new Set(account.payments.map((payment) => payment.monthKey));
   let count = 0;
 
@@ -1198,8 +1202,30 @@ function getPaymentCoverage(account, startMonthKey) {
     count += 1;
   }
 
+  let paidCycles = count;
+  let firstUnpaidMonthKey = shiftMonthKeySafe(startMonthKey, count);
+
+  if (endMonthKey) {
+    paidCycles = 0;
+    firstUnpaidMonthKey = null;
+
+    for (
+      let monthKey = startMonthKey;
+      monthKey <= endMonthKey;
+      monthKey = shiftMonthKeySafe(monthKey, 1)
+    ) {
+      if (paymentsByMonth.has(monthKey)) {
+        paidCycles += 1;
+      } else if (!firstUnpaidMonthKey) {
+        firstUnpaidMonthKey = monthKey;
+      }
+    }
+  }
+
   return {
     count,
+    paidCycles,
+    firstUnpaidMonthKey,
     paidThroughMonth: count > 0 ? shiftMonthKeySafe(startMonthKey, count - 1) : null,
   };
 }
@@ -1217,10 +1243,10 @@ function buildNextPaymentRecord(account, today, exchangeRate) {
   const startDate = parseLocalDate(account.startDate);
   const startMonthKey = toMonthKey(startDate);
   const currentMonthKey = toMonthKey(today);
-  const paymentCoverage = getPaymentCoverage(account, startMonthKey);
-  const nextMonthKey = shiftMonthKeySafe(startMonthKey, paymentCoverage.count);
+  const paymentCoverage = getPaymentCoverage(account, startMonthKey, currentMonthKey);
+  const nextMonthKey = paymentCoverage.firstUnpaidMonthKey;
 
-  if (nextMonthKey > currentMonthKey) {
+  if (!nextMonthKey || nextMonthKey > currentMonthKey) {
     return null;
   }
 
